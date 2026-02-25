@@ -150,7 +150,7 @@ Transform:
   m_GameObject: {fileID: 137516530}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -79.02, y: 31.95, z: -85.05}
+  m_LocalPosition: {x: -0.7902, y: 0.3195, z: -0.8505}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -165,14 +165,14 @@ WheelCollider:
   m_GameObject: {fileID: 137516530}
   serializedVersion: 2
   m_Center: {x: 0, y: 0, z: 0}
-  m_Radius: 32.28
+  m_Radius: 0.34
   m_SuspensionSpring:
     spring: 35000
     damper: 4500
     targetPosition: 0.5
-  m_SuspensionDistance: 0.3
-  m_ForceAppPointDistance: 0
-  m_Mass: 20
+  m_SuspensionDistance: 0.1
+  m_ForceAppPointDistance: -0.2
+  m_Mass: 10
   m_WheelDampingRate: 0.25
   m_ForwardFriction:
     m_ExtremumSlip: 0.4
@@ -322,6 +322,53 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &297385165
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 297385167}
+  - component: {fileID: 297385166}
+  m_Layer: 0
+  m_Name: CANBusManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &297385166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 297385165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0bfd978672a2ad409f161c591a69c31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.CAN.CANBusManager
+  portName: COM5
+  baudRate: 2000000
+  simulationMode: 1
+--- !u!4 &297385167
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 297385165}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.85556, y: 0, z: 1.18957}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &368005250 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -321545447458647186, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
@@ -341,8 +388,8 @@ Rigidbody:
   m_GameObject: {fileID: 428680053}
   serializedVersion: 5
   m_Mass: 1500
-  m_LinearDamping: 0.05
-  m_AngularDamping: 0.5
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -364,14 +411,35 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
   m_PrefabInstance: {fileID: 2126939923}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &428680056
+--- !u!65 &428680056
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428680053}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.83, y: 1.07, z: 3.89}
+  m_Center: {x: 0, y: 0.74, z: 0.5}
+--- !u!114 &428680057
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 428680053}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d85cd235e5e72ba45be98461893b7b70, type: 3}
   m_Name: 
@@ -389,36 +457,16 @@ MonoBehaviour:
   tireRL: {fileID: 43409460}
   tireRR: {fileID: 2136934174}
   driveType: 0
+  torqueScale: 0.35
   maxBrakeTorque: 3000
   handBrakeTorque: 5000
   maxSteerAngle: 35
   steeringRatio: 13
   centerOfMassOffset: {x: 0, y: -0.3, z: 0.1}
---- !u!114 &428680057
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428680053}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6944a8cd75d5d7c439774dc124fd5933, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CarSim.Vehicle.ManualTransmission
-  forwardGearRatios:
-  - 3.76
-  - 2.27
-  - 1.65
-  - 1.19
-  - 1
-  - 0.84
-  reverseGearRatio: -3.56
-  finalDriveRatio: 3.73
-  bitePoint: 0.35
-  maxSlipTorque: 350
-  engagementSpeed: 2.5
-  shiftTime: 0.15
+  fwdFrictionStiffnessFront: 1.4
+  fwdFrictionStiffnessRear: 1.6
+  sideFrictionStiffnessFront: 1.8
+  sideFrictionStiffnessRear: 1.5
 --- !u!114 &428680058
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -426,15 +474,40 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 428680053}
-  m_Enabled: 0
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6944a8cd75d5d7c439774dc124fd5933, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.Vehicle.ManualTransmission
+  forwardGearRatios:
+  - 4.5
+  - 2.5
+  - 1.72
+  - 1.28
+  - 1
+  - 0.82
+  reverseGearRatio: -4.5
+  finalDriveRatio: 4.3
+  bitePoint: 0.35
+  maxSlipTorque: 350
+  shiftTime: 0.15
+  driveEfficiency: 0.92
+  stallRpm: 400
+--- !u!114 &428680059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428680053}
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29b3e605250de884dbc409e40169ad12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSim.Vehicle.Engine
-  idleRpm: 850
-  redlineRpm: 7200
+  idleRpm: 400
+  redlineRpm: 5000
   maxTorqueNm: 320
-  engineBrakeCoeff: 0.05
   torqueCurve:
     serializedVersion: 2
     m_Curve:
@@ -495,10 +568,11 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  revLimitRpm: 7000
+  revLimitRpm: 5000
   revLimitCutDuration: 0.08
-  flywheelInertia: 0.25
---- !u!114 &428680059
+  flywheelInertia: 2
+  frictionCoeff: 0.055
+--- !u!114 &428680060
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -507,17 +581,93 @@ MonoBehaviour:
   m_GameObject: {fileID: 428680053}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 344b43847477d3644a4f564bba415d5b, type: 3}
+  m_Script: {fileID: 11500000, guid: d89398612154b0b41ac4a8a7d7e892ba, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SimpleCarTest
-  WC_FL: {fileID: 1007247000}
-  WC_FR: {fileID: 1180605053}
-  WC_RL: {fileID: 137516532}
-  WC_RR: {fileID: 763709038}
-  Mesh_FL: {fileID: 575608964}
-  Mesh_FR: {fileID: 572293082}
-  Mesh_RL: {fileID: 368005250}
-  Mesh_RR: {fileID: 1780465199}
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.ADAS.ABS
+  absEnabled: 1
+  lockSlipRatio: 0.25
+  releaseRatio: 0.1
+  maxBrakeTorque: 2500
+  minSpeedKph: 5
+--- !u!114 &428680061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428680053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24ff6e73f44711842807c400d68dee51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.ADAS.EPS
+  maxFeedbackTorque: 1
+  returnTorque: 0.3
+  highSpeedDamping: 0.4
+  lateralGSensitivity: 0.25
+--- !u!114 &428680062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428680053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9c0c612ca680ad41829858507f7a4f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.ADAS.ESC
+  escEnabled: 1
+  yawRateThreshold: 0.15
+  correctionTorque: 1500
+  minSpeedKph: 15
+--- !u!114 &428680063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428680053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 516743ed82474f34f8b4203dc2c2fc2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.ADAS.TCS
+  tcsEnabled: 1
+  slipThreshold: 0.12
+  throttleCutRate: 8
+--- !u!1 &518804521
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 518804522}
+  m_Layer: 0
+  m_Name: CamaraPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &518804522
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 518804521}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.07, y: 1.23, z: -3.09}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2044148734}
+  m_Father: {fileID: 1058357551}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &572293082 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8033289761630329750, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
@@ -554,7 +704,7 @@ Transform:
   m_GameObject: {fileID: 763709036}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 79.02, y: 31.95, z: -85.05}
+  m_LocalPosition: {x: 0.7902, y: 0.3195, z: -0.8505}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -569,14 +719,14 @@ WheelCollider:
   m_GameObject: {fileID: 763709036}
   serializedVersion: 2
   m_Center: {x: 0, y: 0, z: 0}
-  m_Radius: 32.28
+  m_Radius: 0.34
   m_SuspensionSpring:
     spring: 35000
     damper: 4500
     targetPosition: 0.5
-  m_SuspensionDistance: 0.3
-  m_ForceAppPointDistance: 0
-  m_Mass: 20
+  m_SuspensionDistance: 0.1
+  m_ForceAppPointDistance: -0.2
+  m_Mass: 10
   m_WheelDampingRate: 0.25
   m_ForwardFriction:
     m_ExtremumSlip: 0.4
@@ -625,14 +775,14 @@ WheelCollider:
   m_GameObject: {fileID: 1007246999}
   serializedVersion: 2
   m_Center: {x: 0, y: 0, z: 0}
-  m_Radius: 32.28
+  m_Radius: 0.34
   m_SuspensionSpring:
     spring: 35000
     damper: 4500
     targetPosition: 0.5
-  m_SuspensionDistance: 0.3
-  m_ForceAppPointDistance: 0
-  m_Mass: 20
+  m_SuspensionDistance: 0.1
+  m_ForceAppPointDistance: -0.2
+  m_Mass: 10
   m_WheelDampingRate: 0.25
   m_ForwardFriction:
     m_ExtremumSlip: 0.4
@@ -664,12 +814,17 @@ Transform:
   m_GameObject: {fileID: 1007246999}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -79.02, y: 31.95, z: 184.77}
+  m_LocalPosition: {x: -0.7902, y: 0.3195, z: 1.8477}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 428680055}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1058357551 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6464506388877944918, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+  m_PrefabInstance: {fileID: 2126939923}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1180605051
 GameObject:
   m_ObjectHideFlags: 0
@@ -696,7 +851,7 @@ Transform:
   m_GameObject: {fileID: 1180605051}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 79.02, y: 31.95, z: 184.77}
+  m_LocalPosition: {x: 0.7902, y: 0.3195, z: 1.8477}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -711,14 +866,14 @@ WheelCollider:
   m_GameObject: {fileID: 1180605051}
   serializedVersion: 2
   m_Center: {x: 0, y: 0, z: 0}
-  m_Radius: 32.28
+  m_Radius: 0.34
   m_SuspensionSpring:
     spring: 35000
     damper: 4500
     targetPosition: 0.5
-  m_SuspensionDistance: 0.3
-  m_ForceAppPointDistance: 0
-  m_Mass: 20
+  m_SuspensionDistance: 0.1
+  m_ForceAppPointDistance: -0.2
+  m_Mass: 10
   m_WheelDampingRate: 0.25
   m_ForwardFriction:
     m_ExtremumSlip: 0.4
@@ -859,6 +1014,86 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7362986944441884105, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
   m_PrefabInstance: {fileID: 2126939923}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1697803090
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1697803093}
+  - component: {fileID: 1697803092}
+  - component: {fileID: 1697803091}
+  m_Layer: 0
+  m_Name: UIManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1697803091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1697803090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d41546565872104c9eabe4813812262, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.UI.Dashboard
+  speedNeedle: {fileID: 0}
+  speedText: {fileID: 0}
+  speedNeedleMin: -135
+  speedNeedleMax: 135
+  maxSpeedKph: 260
+  rpmNeedle: {fileID: 0}
+  rpmNeedleMin: -135
+  rpmNeedleMax: 135
+  maxRpm: 8000
+  gearText: {fileID: 0}
+  absLight: {fileID: 0}
+  tcsLight: {fileID: 0}
+  escLight: {fileID: 0}
+  engineLight: {fileID: 0}
+  batteryLight: {fileID: 0}
+  warningOn: {r: 1, g: 0, b: 0, a: 1}
+  warningOff: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+--- !u!114 &1697803092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1697803090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c7d8f396a4dd504da76583dea48cd2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.UI.VehicleDebugOverlay
+  showOverlay: 1
+  fontSize: 13
+  bigFontSize: 28
+  colWidth: 260
+  marginX: 12
+  marginY: 12
+--- !u!4 &1697803093
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1697803090}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.915, y: 1.52698, z: 0.23054}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1780465199 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5230863440398666952, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
@@ -924,7 +1159,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 103
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -950,12 +1185,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2044148731}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 197, z: -551}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 518804522}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2044148735
 MonoBehaviour:
@@ -1001,6 +1236,86 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!1 &2048350888
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2048350892}
+  - component: {fileID: 2048350891}
+  - component: {fileID: 2048350890}
+  - component: {fileID: 2048350889}
+  m_Layer: 0
+  m_Name: CANHandler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2048350889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048350888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55c205c302ecd1646b4765bf45544820, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.CAN.SwitchPanelHandler
+  simMode: 1
+--- !u!114 &2048350890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048350888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53830b82609556e43865a7fe705ca0f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.CAN.SteeringHandler
+  maxAngle: 450
+  simMode: 1
+--- !u!114 &2048350891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048350888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1600ef7b28ad9f40a063b4e8925582a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CarSim.CAN.PedalECUHandler
+  throttleMin: 0
+  throttleMax: 65535
+  brakeMin: 0
+  brakeMax: 65535
+  clutchMin: 0
+  clutchMax: 65535
+  simMode: 1
+--- !u!4 &2048350892
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048350888}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.85556, y: 0, z: 1.18957}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2071020847 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1090700060979895183, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
@@ -1032,7 +1347,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 37.9
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1089,10 +1404,19 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       insertIndex: -1
       addedObject: {fileID: 763709037}
+    - targetCorrespondingSourceObject: {fileID: 6464506388877944918, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 518804522}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       insertIndex: -1
       addedObject: {fileID: 428680054}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 428680056}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 428680059}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       insertIndex: -1
       addedObject: {fileID: 428680058}
@@ -1101,10 +1425,16 @@ PrefabInstance:
       addedObject: {fileID: 428680057}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 428680056}
+      addedObject: {fileID: 428680063}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 428680059}
+      addedObject: {fileID: 428680062}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 428680061}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 428680060}
   m_SourcePrefab: {fileID: 100100000, guid: e9eb0f2d5b5f59f478ece3ceb7fc3000, type: 3}
 --- !u!4 &2136934174 stripped
 Transform:
@@ -1115,7 +1445,9 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 2044148734}
   - {fileID: 261114407}
   - {fileID: 2126939923}
   - {fileID: 1281315809}
+  - {fileID: 297385167}
+  - {fileID: 2048350892}
+  - {fileID: 1697803093}
