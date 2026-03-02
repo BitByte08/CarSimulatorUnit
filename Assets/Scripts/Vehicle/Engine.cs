@@ -23,7 +23,7 @@ namespace CarSim.Vehicle
 
         [Header("관성 / 마찰")]
         [SerializeField] float flywheelInertia = 2.0f;   // kg·m²
-        [SerializeField] float frictionCoeff   = 0.055f; // Nm/RPM 스로틀 오프 드래그
+        [SerializeField] float frictionCoeff   = 0.06f;  // Nm/RPM 스로틀 오프 드래그 (엔진 브레이크)
 
         // ── 공개 상태 ─────────────────────────────────────────────────────────
         public float RPM           { get; private set; }
