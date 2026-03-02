@@ -42,8 +42,8 @@ namespace CarSim.Vehicle
         [SerializeField] float torqueScale = 0.15f;
 
         [Header("브레이크")]
-        [SerializeField] float maxBrakeTorque  = 2500f;  // Nm/휠 (4휠 합산: 1.5톤 차 기준 ~1.7g 제동)
-        [SerializeField] float handBrakeTorque = 4000f;
+        [SerializeField] float maxBrakeTorque  = 3500f;  // Nm/휠 (1.5톤 차 표준 제동력)
+        [SerializeField] float handBrakeTorque = 4500f;
 
         [Header("스티어링")]
         [SerializeField] float maxSteerAngle   = 35f;   // 앞바퀴 최대 조향각 (도)
@@ -54,9 +54,9 @@ namespace CarSim.Vehicle
 
         [Header("타이어 마찰 (WheelCollider 커브)")]
         [Tooltip("앞바퀴 종방향 마찰 강성 (가속/제동 그립)")]
-        [SerializeField] float fwdFrictionStiffnessFront   = 1.4f;
+        [SerializeField] float fwdFrictionStiffnessFront   = 2.2f;
         [Tooltip("뒷바퀴 종방향 마찰 강성")]
-        [SerializeField] float fwdFrictionStiffnessRear    = 1.6f;
+        [SerializeField] float fwdFrictionStiffnessRear    = 2.4f;
         [Tooltip("앞바퀴 횡방향 마찰 강성 (코너링)")]
         [SerializeField] float sideFrictionStiffnessFront  = 1.8f;
         [Tooltip("뒷바퀴 횡방향 마찰 강성")]
@@ -90,12 +90,36 @@ namespace CarSim.Vehicle
             _abs      = GetComponent<ABS>();
 
             _rb.centerOfMass = centerOfMassOffset;
+            
+            // 공기 저항은 최소한으로 (타이어 마찰이 주요 저항)
+            _rb.linearDamping = 0.01f;        // 아주 약한 공기 저항
+            _rb.angularDamping = 0.05f; // 원래 설정 유지
+
+            // WheelCollider 물리 설정
+            ConfigureWheelPhysics(wheelFL);
+            ConfigureWheelPhysics(wheelFR);
+            ConfigureWheelPhysics(wheelRL);
+            ConfigureWheelPhysics(wheelRR);
 
             // 타이어 마찰 커브 설정
             SetWheelFriction(wheelFL, fwdFrictionStiffnessFront, sideFrictionStiffnessFront);
             SetWheelFriction(wheelFR, fwdFrictionStiffnessFront, sideFrictionStiffnessFront);
             SetWheelFriction(wheelRL, fwdFrictionStiffnessRear,  sideFrictionStiffnessRear);
             SetWheelFriction(wheelRR, fwdFrictionStiffnessRear,  sideFrictionStiffnessRear);
+        }
+
+        static void ConfigureWheelPhysics(WheelCollider w)
+        {
+            if (w == null) return;
+            
+            // 휠 질량: 너무 크면 브레이크가 안 먹힘 (타이어+휠 실제 무게 ~20kg)
+            w.mass = 20f;
+            
+            // 휠 댐핑: 적절한 값으로 조정 (너무 높으면 선회 시 휠 잠김)
+            w.wheelDampingRate = 0.25f;
+            
+            // 힘 적용점: 서스펜션 중심에서의 거리 (기본 0은 비현실적)
+            w.forceAppPointDistance = 0.1f;
         }
 
         static void SetWheelFriction(WheelCollider w, float fwdStiffness, float sideStiffness)
@@ -106,7 +130,7 @@ namespace CarSim.Vehicle
             fwd.extremumSlip        = 0.1f;   // 실제 타이어 피크 그립 지점 (0.05~0.15)
             fwd.extremumValue       = 1.0f;
             fwd.asymptoteSlip       = 0.5f;
-            fwd.asymptoteValue      = 0.6f;
+            fwd.asymptoteValue      = 0.75f;
             fwd.stiffness           = fwdStiffness;
             w.forwardFriction       = fwd;
 
@@ -154,11 +178,11 @@ namespace CarSim.Vehicle
 
             // 전진 속도만으로 wheel RPM 계산 (횡방향 미끄러짐 속도 제외)
             // velocity.magnitude 사용 시 선회 중 횡속도가 합산돼 RPM 과대계산 → 고RPM 토크 감소 → 가속 불가
-            float forwardSpeedMs = Mathf.Max(0f, Vector3.Dot(_rb.linearVelocity, transform.forward));
+            ForwardSpeedMs = Mathf.Max(0f, Vector3.Dot(_rb.linearVelocity, transform.forward));
             float wheelRadius    = (wheelRL != null) ? wheelRL.radius : 0.32f;
-            float speedWheelRpm  = (forwardSpeedMs / (2f * Mathf.PI * wheelRadius)) * 60f;
+            float speedWheelRpm  = (ForwardSpeedMs / (2f * Mathf.PI * wheelRadius)) * 60f;
             _trans.WheelSpeedRpm  = speedWheelRpm;
-            _trans.VehicleSpeedMs = forwardSpeedMs;
+            _trans.VehicleSpeedMs = ForwardSpeedMs;
         }
 
         void ApplyDrive()
@@ -167,9 +191,8 @@ namespace CarSim.Vehicle
             // 시동 꺼짐 시에는 0 처리 — 엔진 브레이크는 클러치 결합 시에만 발생
             float torque   = _engine.IsRunning ? _trans.TransmittedTorque * torqueScale : 0f;
 
-            // 브레이크 밟을 때 음수 motorTorque(엔진브레이크) 제거
-            // 뒷바퀴에 엔진브레이크+풋브레이크 중첩 → ABS 즉시 발동 → 앞바퀴만 제동되는 현상 방지
-            if (BrakeInput > 0f && torque < 0f) torque = 0f;
+            // 브레이크와 엔진 브레이크를 함께 사용하여 제동력 향상
+            // (엔진 브레이크는 음수 torque로 자연스럽게 제동에 기여)
 
             float perWheel = torque * 0.5f;
 
@@ -219,6 +242,8 @@ namespace CarSim.Vehicle
 
         // 브레이크는 ADAS 모듈(ABS)에서 수정 가능하도록 공개
         public float BrakeInput  => _pedals.Brake;
+        public float MaxBrakeTorque => maxBrakeTorque;
+        public float ForwardSpeedMs { get; private set; }  // ABS가 사용하는 전진 속도 (횡속도 제외)
         public bool  HandbrakeOn => Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
 
         void ApplyBrakes()

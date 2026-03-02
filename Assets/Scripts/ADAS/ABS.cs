@@ -13,22 +13,24 @@ namespace CarSim.ADAS
     {
         [Header("ABS 설정")]
         [SerializeField] bool   absEnabled     = true;
-        [SerializeField] float  lockSlipRatio  = 0.25f;  // 잠김 감지: 기대RPM 대비 25% 이상 느리면 잠김
-        [SerializeField] float  releaseRatio   = 0.10f;  // 회복 감지: 10% 이하면 재적용
-        [SerializeField] float  maxBrakeTorque = 2500f;
-        [SerializeField] float  minSpeedKph    = 5f;     // 저속에선 ABS 비작동
+        [SerializeField] float  lockThreshold  = 0.7f;   // 잠김 판정 임계값: 기대RPM의 70% 이하 = 잠김
+        [SerializeField] float  releaseThreshold = 0.85f; // 해제 판정 임계값: 기대RPM의 85% 이상 = 정상
+        [SerializeField] float  minSpeedKph    = 3f;     // 저속에선 ABS 비작동
+        [SerializeField] float  pulseFrequency = 10f;    // ABS 펄스 빈도 (Hz)
 
         public bool IsActive { get; private set; }
 
         VehicleController _vc;
         WheelCollider[]   _wheels;
-        bool[]            _wheelReleased;  // 휠별 압력 해제 상태 (히스테리시스)
+        bool[]            _wheelLocked;  // 휠별 잠금 상태
+        float             _pulseCycle;   // 펄스 사이클 (0~1)
 
         void Awake()
         {
             _vc            = GetComponent<VehicleController>();
             _wheels        = _vc.GetAllWheels();
-            _wheelReleased = new bool[_wheels.Length];
+            _wheelLocked   = new bool[_wheels.Length];
+            _pulseCycle    = 0f;
         }
 
         void FixedUpdate()
@@ -43,15 +45,22 @@ namespace CarSim.ADAS
             float brakeInput  = _vc.BrakeInput;
             float vehicleKph  = _vc.SpeedKph;
 
-            // 저속 / 브레이크 미입력 시 ABS 비작동 → 그냥 전체 적용
+            // 저속 / 브레이크 미입력 시 ABS 비작동
             if (vehicleKph < minSpeedKph || brakeInput < 0.05f)
             {
                 ApplyBrakeNormal();
-                System.Array.Clear(_wheelReleased, 0, _wheelReleased.Length);
+                System.Array.Clear(_wheelLocked, 0, _wheelLocked.Length);
+                _pulseCycle = 0f;
                 return;
             }
 
-            float vehicleSpeedMs = _vc.SpeedMs;
+            // 펄스 주기 업데이트 (0~1)
+            _pulseCycle += Time.fixedDeltaTime * pulseFrequency;
+            if (_pulseCycle > 1f) _pulseCycle -= 1f;
+            bool pulseOn = _pulseCycle > 0.5f;  // 50% 듀티 사이클
+
+            float vehicleSpeedMs = _vc.ForwardSpeedMs;
+            float maxBrake = _vc.MaxBrakeTorque;
 
             for (int i = 0; i < _wheels.Length; i++)
             {
@@ -60,26 +69,26 @@ namespace CarSim.ADAS
                 float expectedRpm       = (vehicleSpeedMs / wheelCircumference) * 60f;
                 float actualRpm         = Mathf.Abs(_wheels[i].rpm);
 
-                // 슬립률: (기대 - 실제) / 기대  (0=미끄럼없음, 1=완전잠김)
-                float slip = expectedRpm > 1f
-                    ? Mathf.Clamp01((expectedRpm - actualRpm) / expectedRpm)
-                    : 0f;
+                // 휠 속도 비율 (0~1)
+                float speedRatio = expectedRpm > 1f ? actualRpm / expectedRpm : 1f;
 
-                // 히스테리시스: 잠김(lockSlipRatio↑) → 해제, 회복(releaseRatio↓) → 재적용
-                if (slip > lockSlipRatio)
-                    _wheelReleased[i] = true;
-                else if (slip < releaseRatio)
-                    _wheelReleased[i] = false;
+                // 휠 잠김 판정 (히스테리시스)
+                if (speedRatio < lockThreshold)
+                    _wheelLocked[i] = true;
+                else if (speedRatio > releaseThreshold)
+                    _wheelLocked[i] = false;
 
                 float brakeTorque;
-                if (_wheelReleased[i])
+                if (_wheelLocked[i])
                 {
-                    IsActive    = true;
-                    brakeTorque = 0f;
+                    IsActive = true;
+                    // ABS 펄스: on일 때만 30% 압력, off일 때 0
+                    brakeTorque = (pulseOn ? 0.3f : 0f) * brakeInput * maxBrake;
                 }
                 else
                 {
-                    brakeTorque = brakeInput * maxBrakeTorque;
+                    // 정상 제동
+                    brakeTorque = brakeInput * maxBrake;
                 }
 
                 // 핸드브레이크는 뒷바퀴만 (ABS 비개입)
@@ -92,7 +101,7 @@ namespace CarSim.ADAS
 
         void ApplyBrakeNormal()
         {
-            float t = _vc.BrakeInput * maxBrakeTorque;
+            float t = _vc.BrakeInput * _vc.MaxBrakeTorque;
             foreach (var w in _wheels) w.brakeTorque = t;
         }
     }
