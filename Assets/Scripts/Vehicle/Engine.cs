@@ -10,20 +10,21 @@ namespace CarSim.Vehicle
     public class Engine : MonoBehaviour
     {
         [Header("엔진 스펙")]
-        [SerializeField] float idleRpm      = 400f;
-        [SerializeField] float redlineRpm   = 5000f;
-        [SerializeField] float maxTorqueNm  = 320f;
+        [SerializeField] float idleRpm      = 800f;     // 가솔린 승용차 아이들
+        [SerializeField] float redlineRpm   = 6500f;    // 가솔린 일반 최대 RPM
+        [SerializeField] float maxTorqueNm  = 160f;     // 준중형 1.6L NA 수준 (약 16kgf.m)
 
         [Header("토크 커브 (RPM 정규화 0-1)")]
         [SerializeField] AnimationCurve torqueCurve = DefaultTorqueCurve();
 
         [Header("레브 리밋")]
-        [SerializeField] float revLimitRpm         = 4800f;
-        [SerializeField] float revLimitCutDuration = 0.08f;
+        [SerializeField] float revLimitRpm         = 6600f;  // 레드라인(6500) 도달 허용
+        [SerializeField] float revLimitCutDuration = 0.1f;   // 컷 지속 시간 증가 (확실한 끊김)
+        [SerializeField] float revLimitResumeRpm   = 6450f;  // 히스테리시스: 이 RPM 아래로 떨어져야 재개 (바운싱 유도)
 
         [Header("관성 / 마찰")]
-        [SerializeField] float flywheelInertia = 2.0f;   // kg·m²
-        [SerializeField] float frictionCoeff   = 0.06f;  // Nm/RPM 스로틀 오프 드래그 (엔진 브레이크)
+        [SerializeField] float flywheelInertia = 0.25f;  // ↓ 관성 대폭 감소 (2.0 → 0.25) - 빠른 RPM 반응
+        [SerializeField] float frictionCoeff   = 0.03f;  // ↓ Nm/RPM 스로틀 오프 드래그 감소 (0.06 → 0.03)
 
         // ── 공개 상태 ─────────────────────────────────────────────────────────
         public float RPM           { get; private set; }
@@ -62,14 +63,16 @@ namespace CarSim.Vehicle
         {
             if (!IsRunning) return;
             // 스톨 처리는 ManualTransmission의 RPM 조건이 담당
-            RPM = Mathf.Clamp(rpm, 0f, redlineRpm);
+            // 바퀴에 의해 강제로 도는 경우 레드존을 넘을 수 있어야 함 (오버런 허용)
+            RPM = Mathf.Max(0f, rpm);
         }
 
         public void PullRPM(float targetRpm, float strength)
         {
             if (!IsRunning) return;
-            float alpha = Mathf.Clamp01(strength) * Time.fixedDeltaTime * 15f;
-            RPM = Mathf.Lerp(RPM, Mathf.Clamp(targetRpm, 0f, redlineRpm), alpha);
+            // 빠른 RPM 동기화 (15 → 25)
+            float alpha = Mathf.Clamp01(strength) * Time.fixedDeltaTime * 25f;
+            RPM = Mathf.Lerp(RPM, Mathf.Max(0f, targetRpm), alpha);
         }
 
         // ── ManualTransmission 에서 매 FixedUpdate 호출 ───────────────────────
@@ -85,11 +88,18 @@ namespace CarSim.Vehicle
             }
 
             // 레브 리밋
-            if (RPM >= revLimitRpm) { _revLimiterActive = true; _revLimitTimer = revLimitCutDuration; }
+            if (!_revLimiterActive && RPM >= revLimitRpm)
+            {
+                _revLimiterActive = true;
+                _revLimitTimer = revLimitCutDuration;
+            }
+
             if (_revLimiterActive)
             {
                 _revLimitTimer -= dt;
-                if (_revLimitTimer <= 0f) _revLimiterActive = false;
+                // 타이머가 지났고 + RPM이 충분히 떨어졌을 때만 리미터 해제 (바운싱 효과)
+                if (_revLimitTimer <= 0f && RPM < revLimitResumeRpm)
+                    _revLimiterActive = false;
             }
 
             float throttle = _revLimiterActive ? 0f : ThrottleInput;
@@ -111,7 +121,8 @@ namespace CarSim.Vehicle
                 if (throttle < 0.02f && RPM < idleRpm * 1.1f)
                     RPM = Mathf.MoveTowards(RPM, idleRpm, dt * 150f);
 
-                RPM = Mathf.Clamp(RPM, 0f, redlineRpm);
+                // 물리 연산에서는 revLimitRpm보다 약간 높게 허용해야 리미터가 작동함
+                RPM = Mathf.Clamp(RPM, 0f, revLimitRpm * 1.5f);
             }
             // (isCoupled: RPM은 ForceRPM/PullRPM 이 이미 바퀴 속도에 맞춰 설정)
 
@@ -121,17 +132,29 @@ namespace CarSim.Vehicle
             EngineBrakeTorque = throttle < 0.02f
                 ? frictionCoeff * Mathf.Max(0f, RPM - idleRpm * 0.5f)
                 : 0f;
+            
+            // 디버그: 엔진 토크 파이프라인
+            if (throttle > 0.5f && Time.frameCount % 30 == 0)
+            {
+                Debug.Log($"[Engine] RPM={RPM:F0}, throttle={throttle:F2}, " +
+                          $"curveVal={torqueCurve.Evaluate(n):F2}, maxTorque={maxTorqueNm}, " +
+                          $"OutputTorque={OutputTorque:F1} Nm");
+            }
         }
+
+        public float RedlineRpm => redlineRpm;
 
         static AnimationCurve DefaultTorqueCurve()
         {
+            // 가솔린 NA 특성: 중고회전(4000~5000rpm)에서 최대 토크
             return new AnimationCurve(
-                new Keyframe(0.00f, 0.50f),
-                new Keyframe(0.15f, 0.75f),
-                new Keyframe(0.35f, 1.00f),
-                new Keyframe(0.60f, 0.95f),
-                new Keyframe(0.80f, 0.80f),
-                new Keyframe(1.00f, 0.50f)
+                new Keyframe(0.00f, 0.60f),  // 아이들
+                new Keyframe(0.20f, 0.75f),  // ~1300rpm
+                new Keyframe(0.40f, 0.85f),  // ~2600rpm
+                new Keyframe(0.60f, 0.95f),  // ~3900rpm
+                new Keyframe(0.70f, 1.00f),  // ~4500rpm (최대 토크)
+                new Keyframe(0.85f, 0.92f),  // ~5500rpm
+                new Keyframe(1.00f, 0.80f)   // 레드라인
             );
         }
     }
