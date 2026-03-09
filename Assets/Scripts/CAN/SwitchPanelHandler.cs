@@ -26,6 +26,15 @@ namespace CarSim.CAN
 
         bool _prevEngineKey;
 
+        // VehicleController가 전원 상태를 제어할 수 있도록 public 메서드 추가
+        public void SetIgnition(bool on)
+        {
+            if (on)
+                Switches |= SwitchFlags.Ignition;
+            else
+                Switches &= ~SwitchFlags.Ignition;
+        }
+
         void Start()
         {
             CANBusManager.Instance.Register(CANID.SWITCH_STATUS, OnSwitchData);
@@ -55,9 +64,9 @@ namespace CarSim.CAN
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            // 이그니션: I키 토글
-            if (kb.iKey.wasPressedThisFrame)
-                Switches ^= SwitchFlags.Ignition;
+            // 이그니션: I키 토글 -> 이제 VehicleController가 E키로 제어하므로 비활성화
+            // if (kb.iKey.wasPressedThisFrame)
+            //     Switches ^= SwitchFlags.Ignition;
 
             // 시동: E키 누른 프레임에만 ON
             if (kb.eKey.wasPressedThisFrame)

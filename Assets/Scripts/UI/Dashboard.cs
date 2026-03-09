@@ -104,7 +104,11 @@ namespace CarSim.UI
             SetLight(absLight,    _abs  != null && _abs.IsActive);
             SetLight(tcsLight,    _tcs  != null && _tcs.IsActive);
             SetLight(escLight,    _esc  != null && _esc.IsActive);
-            SetLight(engineLight, _engine != null && !_engine.IsRunning);
+
+            // ACC/ON 상태에서만 배터리 및 엔진 경고등 점등
+            bool powerOn = _vc != null && _vc.CurrentPowerState != VehicleController.PowerState.Off;
+            SetLight(batteryLight, powerOn && (_engine == null || !_engine.IsRunning));
+            SetLight(engineLight,  powerOn && (_engine == null || !_engine.IsRunning));
         }
 
         void SetLight(Image img, bool on)
