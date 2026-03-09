@@ -14,8 +14,13 @@ namespace CarSim.ADAS
     {
         [Header("TCS 설정")]
         [SerializeField] bool  tcsEnabled      = true;
-        [SerializeField] float slipThreshold   = 0.12f;  // 구동 슬립 한계
-        [SerializeField] float throttleCutRate = 8f;     // 출력 복구 속도
+        [SerializeField] float slipThreshold   = 0.14f;
+        [SerializeField] float throttleCutRate = 10f;
+        [SerializeField] float throttleRecoverRate = 9f;
+        [SerializeField] float minReferenceSpeedMs = 2f; // 저속에서는 슬립 판정 비활성
+        [SerializeField] float minThrottleLimit = 0.65f;
+        [SerializeField] float maxTcsSpeedKph = 90f;
+        [SerializeField] float slipFilterRate = 7f;
 
         public bool  IsActive        { get; private set; }
         public float ThrottleLimit   { get; private set; } = 1f;
@@ -23,6 +28,7 @@ namespace CarSim.ADAS
         VehicleController _vc;
         Engine            _engine;
         WheelCollider[]   _wheels;
+        float             _filteredSlip;
 
         void Awake()
         {
@@ -40,33 +46,52 @@ namespace CarSim.ADAS
                 return;
             }
 
-            // 비구동 휠 평균 속도 = 차체 기준 속도
-            float refSpeedFL = Mathf.Abs(_wheels[0].rpm) * _wheels[0].radius * Mathf.PI / 30f;
-            float refSpeedFR = Mathf.Abs(_wheels[1].rpm) * _wheels[1].radius * Mathf.PI / 30f;
-            float refSpeed   = (refSpeedFL + refSpeedFR) * 0.5f; // FWD면 뒤로 바꿔야 함
+            if (_vc.SpeedKph >= maxTcsSpeedKph)
+            {
+                ThrottleLimit = Mathf.MoveTowards(ThrottleLimit, 1f,
+                                                  Time.fixedDeltaTime * throttleRecoverRate);
+                IsActive = false;
+                _engine.ThrottleInput *= ThrottleLimit;
+                return;
+            }
 
-            // 구동 휠 슬립 검사 (RWD 기준: 뒷바퀴)
-            float driveSpeedRL = Mathf.Abs(_wheels[2].rpm) * _wheels[2].radius * Mathf.PI / 30f;
-            float driveSpeedRR = Mathf.Abs(_wheels[3].rpm) * _wheels[3].radius * Mathf.PI / 30f;
-            float driveSpeed   = (driveSpeedRL + driveSpeedRR) * 0.5f;
+            float refSpeed = Mathf.Max(_vc.ForwardSpeedMs, minReferenceSpeedMs);
+            float driveSpeed = GetDriveWheelSpeedMs();
+            float slip = (driveSpeed - refSpeed) / refSpeed;
+            _filteredSlip = Mathf.Lerp(_filteredSlip, slip, Time.fixedDeltaTime * slipFilterRate);
 
-            float slip = refSpeed > 0.5f ? (driveSpeed - refSpeed) / refSpeed : 0f;
-
-            if (slip > slipThreshold)
+            if (_filteredSlip > slipThreshold)
             {
                 IsActive      = true;
-                ThrottleLimit = Mathf.MoveTowards(ThrottleLimit, 0f,
+                ThrottleLimit = Mathf.MoveTowards(ThrottleLimit, minThrottleLimit,
                                                   Time.fixedDeltaTime * throttleCutRate);
             }
             else
             {
-                IsActive      = slip > slipThreshold * 0.5f;
+                IsActive      = _filteredSlip > slipThreshold * 0.65f;
                 ThrottleLimit = Mathf.MoveTowards(ThrottleLimit, 1f,
-                                                  Time.fixedDeltaTime * throttleCutRate * 0.5f);
+                                                  Time.fixedDeltaTime * throttleRecoverRate);
             }
 
             // 엔진 스로틀 제한
             _engine.ThrottleInput *= ThrottleLimit;
+        }
+
+        float GetDriveWheelSpeedMs()
+        {
+            float WheelSpeedMs(WheelCollider w) => Mathf.Abs(w.rpm) * w.radius * Mathf.PI / 30f;
+
+            switch (_vc.CurrentDriveType)
+            {
+                case VehicleController.DriveType.FWD:
+                    return (WheelSpeedMs(_wheels[0]) + WheelSpeedMs(_wheels[1])) * 0.5f;
+                case VehicleController.DriveType.AWD:
+                    return (WheelSpeedMs(_wheels[0]) + WheelSpeedMs(_wheels[1]) +
+                            WheelSpeedMs(_wheels[2]) + WheelSpeedMs(_wheels[3])) * 0.25f;
+                case VehicleController.DriveType.RWD:
+                default:
+                    return (WheelSpeedMs(_wheels[2]) + WheelSpeedMs(_wheels[3])) * 0.5f;
+            }
         }
     }
 }
