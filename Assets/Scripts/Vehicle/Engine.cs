@@ -22,6 +22,10 @@ namespace CarSim.Vehicle
         [SerializeField] float revLimitCutDuration = 0.1f;   // 컷 지속 시간 증가 (확실한 끊김)
         [SerializeField] float revLimitResumeRpm   = 6450f;  // 히스테리시스: 이 RPM 아래로 떨어져야 재개 (바운싱 유도)
 
+        [Header("시동")]
+        [SerializeField] float crankingRpm = 300f;
+        [SerializeField] float crankingDuration = 0.7f;
+
         [Header("관성 / 마찰")]
         [SerializeField] float flywheelInertia = 0.25f;  // ↓ 관성 대폭 감소 (2.0 → 0.25) - 빠른 RPM 반응
         [SerializeField] float frictionCoeff   = 0.03f;  // ↓ Nm/RPM 스로틀 오프 드래그 감소 (0.06 → 0.03)
@@ -29,8 +33,9 @@ namespace CarSim.Vehicle
         // ── 공개 상태 ─────────────────────────────────────────────────────────
         public float RPM           { get; private set; }
         public float ThrottleInput { get; set; }
-        public bool  IsRunning     { get; private set; }
-        public bool  IsStalled     => !IsRunning;
+        public EngineState State   { get; private set; } = EngineState.Off;
+        public bool IsRunning      => State == EngineState.Running;
+        public bool IsStalled      => State == EngineState.Off;
 
         /// <summary>스로틀 구동 토크 (Nm, ≥ 0)</summary>
         public float OutputTorque      { get; private set; }
@@ -41,20 +46,20 @@ namespace CarSim.Vehicle
 
         float _revLimitTimer;
         bool  _revLimiterActive;
+        float _crankTimer;
 
         // ── 시동 제어 ─────────────────────────────────────────────────────────
         public void StartEngine()
         {
-            if (IsRunning) return;
-            RPM = idleRpm;
-            IsRunning = true;
-            Debug.Log("[Engine] 시동 ON");
+            if (State != EngineState.Off) return;
+            State = EngineState.Cranking;
+            _crankTimer = 0f;
+            Debug.Log("[Engine] 크랭킹 시작...");
         }
-
         public void StopEngine()
         {
-            if (!IsRunning) return;
-            IsRunning = false;
+            if (State == EngineState.Off) return;
+            State = EngineState.Off;
             Debug.Log("[Engine] 시동 OFF");
         }
 
@@ -80,12 +85,34 @@ namespace CarSim.Vehicle
         /// <param name="isCoupled">true=클러치 결합(RPM이미 설정됨) false=자유 회전</param>
         public void Tick(float dt, bool isCoupled)
         {
-            if (!IsRunning)
+            // 현실적인 시동 시퀀스를 위한 상태 머신
+            switch (State)
             {
-                RPM = Mathf.MoveTowards(RPM, 0f, dt * 600f);
-                OutputTorque = EngineBrakeTorque = 0f;
-                return;
+                case EngineState.Off:
+                    RPM = Mathf.MoveTowards(RPM, 0f, dt * 800f);
+                    OutputTorque = EngineBrakeTorque = 0f;
+                    _revLimiterActive = false;
+                    return;
+
+                case EngineState.Cranking:
+                    _crankTimer += dt;
+                    RPM = Mathf.MoveTowards(RPM, crankingRpm, dt * 500f);
+
+                    if (_crankTimer >= crankingDuration)
+                    {
+                        State = EngineState.Running;
+                        Debug.Log("[Engine] 시동 성공");
+                    }
+                    else
+                    {
+                        OutputTorque = EngineBrakeTorque = 0f;
+                        return;
+                    }
+                    break;
             }
+
+            // 아래는 EngineState.Running 일 때만 실행됨
+            if (State != EngineState.Running) return;
 
             // 레브 리밋
             if (!_revLimiterActive && RPM >= revLimitRpm)
@@ -156,6 +183,13 @@ namespace CarSim.Vehicle
                 new Keyframe(0.85f, 0.92f),  // ~5500rpm
                 new Keyframe(1.00f, 0.80f)   // 레드라인
             );
+        }
+
+        public enum EngineState
+        {
+            Off,
+            Cranking,
+            Running
         }
     }
 }

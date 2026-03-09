@@ -66,22 +66,25 @@ namespace CarSim.Vehicle
         void Update()
         {
             bool running = _engine.IsRunning;
+            var currentState = _engine.State;
 
             // ── 시동 / 스톨 이벤트 ───────────────────
-            if (running && !_wasRunning)
+            if (currentState == Engine.EngineState.Cranking && !_wasRunning)
             {
                 PlayOneShot(clipStart);
                 _srcIdle.Play();
                 _srcAccel.Play();
                 _srcDecel.Play();
+                _wasRunning = true; // 크랭킹 시작 시 한 번만 재생
             }
-            else if (!running && _wasRunning)
+            else if (currentState == Engine.EngineState.Off && _wasRunning)
             {
                 PlayOneShot(clipStall);
+                _wasRunning = false;
             }
-            _wasRunning = running;
 
-            if (!running)
+            // 엔진이 완전히 꺼졌을 때만 모든 소스 페이드 아웃
+            if (currentState == Engine.EngineState.Off)
             {
                 FadeSource(_srcIdle,  0f);
                 FadeSource(_srcAccel, 0f);

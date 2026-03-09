@@ -107,7 +107,10 @@ namespace CarSim.UI
             Hdr("■ 스위치");
             if (_switches != null)
             {
-                Row("Ignition",    _switches.IgnitionOn  ? "ON"  : "off",  _switches.IgnitionOn);
+                if (_vehicle != null)
+                {
+                    Row("Power State", _vehicle.CurrentPowerState.ToString(), _vehicle.CurrentPowerState != VehicleController.PowerState.Off);
+                }
                 Row("Engine SW",   _switches.EngineStart ? "ON"  : "off",  _switches.EngineStart);
                 Row("GearRequest", GearName(_switches.GearRequest));
             }
@@ -156,8 +159,14 @@ namespace CarSim.UI
             {
                 bool slipping = _engine.IsRunning &&
                                 Mathf.Abs(_engine.RPM - _engine.WheelDrivenRpm) > 300f;
-                Row("Running",      _engine.IsRunning ? "ON" : "off",     _engine.IsRunning);
-                Row("Stalled",      _engine.IsRunning ? "no" : "STALL",  _engine.IsRunning);
+                
+                Row("State",        _engine.State.ToString(), _engine.IsRunning);
+                if (_engine.State == Engine.EngineState.Off && _pedals != null)
+                {
+                    bool ready = _pedals.Clutch < 0.3f && _pedals.Brake > 0.1f;
+                    Row("Start Cond",   ready ? "Ready" : "Clutch+Brk", ready);
+                }
+
                 Row("RPM (\ubb3c\ub9ac)",   $"{_engine.RPM:F0}");
                 Row("RPM (\uc774\ub860)",   $"{_engine.WheelDrivenRpm:F0}", slipping);
                 Row("Throttle",     $"{_engine.ThrottleInput:F3}");
