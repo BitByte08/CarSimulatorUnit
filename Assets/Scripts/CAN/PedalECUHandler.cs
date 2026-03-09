@@ -48,13 +48,16 @@ namespace CarSim.CAN
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            float vertical = (kb.wKey.isPressed || kb.upArrowKey.isPressed   ? 1f : 0f)
+            float vertical = (kb.wKey.isPressed || kb.upArrowKey.isPressed   ? 0.5f : 0f)
                            - (kb.sKey.isPressed || kb.downArrowKey.isPressed  ? 1f : 0f);
             Throttle = vertical > 0f ?  vertical : 0f;
             Brake    = vertical < 0f ? -vertical : 0f;
 
-            // 클러치: Left Shift — 0.5초에 걸쳐 서서히 변화 (반클러치 흉내)
-            float clutchTarget = kb.leftShiftKey.isPressed ? 0f : 1f;
+            // 클러치: Left Shift(완전분리), Z(반클러치)
+            float clutchTarget = 1f;
+            if (kb.leftShiftKey.isPressed) clutchTarget = 0f;
+            else if (kb.zKey.isPressed) clutchTarget = 0.45f; // 반클러치 테스트 (BitePoint 위)
+
             Clutch = Mathf.MoveTowards(Clutch, clutchTarget, Time.deltaTime * 2f);
         }
 
