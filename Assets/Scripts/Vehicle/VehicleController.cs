@@ -294,7 +294,7 @@ namespace CarSim.Vehicle
             {
                 _engine.StartEngine();
                 CurrentPowerState = PowerState.On; // 시동 걸리면 무조건 ON 상태
-                Debug.Log("[VC] Engine Start sequence initiated. Power state is ON.");
+                Debug.Log("[VC] 시동 시퀀스 시작. 전원 상태: ON");
             }
             // 2. 안 밟고 누르면 OFF -> ACC -> ON -> OFF 순환
             else

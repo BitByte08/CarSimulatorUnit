@@ -170,6 +170,8 @@ namespace CarSim.Vehicle
         }
 
         public float RedlineRpm => redlineRpm;
+        public float IdleRpm => idleRpm;
+        public float CrankingRpm => crankingRpm;
 
         static AnimationCurve DefaultTorqueCurve()
         {
