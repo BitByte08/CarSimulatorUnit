@@ -52,7 +52,7 @@ namespace CarSim.CAN
 #if UNITY_STANDALONE || UNITY_EDITOR
             try
             {
-                _port = new SerialPort(portName, baudRate) { ReadTimeout = 100 };
+                _port = new SerialPort(portName, baudRate) { ReadTimeout = 100, NewLine = "\r" };
                 _port.Open();
                 _port.Write("C\r"); // CANable 닫기
                 Thread.Sleep(100);

@@ -29,6 +29,7 @@ namespace CarSim.CAN
     {
         // ── OpenFFBoard (스티어링) ──────────────────
         public const uint STEERING_ANGLE    = 0x100; // int16 각도 (÷100 = deg)
+        public const uint STEERING_COLUMN   = 0x101; // uint16 스위치 비트필드 (방향지시등, 와이퍼 등)
         public const uint FFB_TORQUE_CMD    = 0x105; // int16 토크 명령 → OpenFFBoard
 
         // ── 페달 ECU (STM32) ──────────────────────
@@ -64,5 +65,7 @@ namespace CarSim.CAN
         WiperSlow   = 1 << 5,  // 와이퍼 저속
         WiperFast   = 1 << 6,  // 와이퍼 고속
         Horn        = 1 << 7,  // 경적
+        TurnLeft    = 1 << 8,  // 좌 방향지시등
+        TurnRight   = 1 << 9,  // 우 방향지시등
     }
 }
