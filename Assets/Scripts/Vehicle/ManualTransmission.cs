@@ -17,9 +17,9 @@ namespace CarSim.Vehicle
     {
         [Header("기어비")]
         // 기어비 재조정: 각 단수 간 간격을 좁혀(Close Ratio) 변속 시 RPM 낙차를 줄임
-        [SerializeField] float[] forwardGearRatios = { 3.45f, 2.05f, 1.45f, 1.10f, 0.88f, 0.72f };
-        [SerializeField] float   reverseGearRatio  = -3.40f;
-        [SerializeField] float   finalDriveRatio   = 4.30f; // 종감속비 소폭 하향 (기어비 간격 조정에 맞춤)
+        [SerializeField] float[] forwardGearRatios = { 4.80f, 2.80f, 1.90f, 1.40f, 1.07f, 0.87f };
+        [SerializeField] float   reverseGearRatio  = -4.75f;
+        [SerializeField] float   finalDriveRatio   = 4.30f;
 
         [Header("클러치")]
         [SerializeField] float bitePoint       = 0.35f;  // 결합 시작 지점 (0~1)

@@ -12,10 +12,12 @@ namespace CarSim.Vehicle
     {
         [Header("헤드라이트 (하향등 / 상향등 공용)")]
         [SerializeField] Light[] headlights;
-        [SerializeField] float   headlightLowIntensity  = 800f;
-        [SerializeField] float   headlightHighIntensity = 2500f;
-        [SerializeField] float   headlightLowAngle      = 35f;
-        [SerializeField] float   headlightHighAngle     = 55f;
+        [SerializeField] float   headlightLowIntensity  = 200f;
+        [SerializeField] float   headlightHighIntensity = 600f;
+        [SerializeField] float   headlightSpotAngle     = 80f;   // 빛 퍼짐 (spotAngle)
+        [SerializeField] float   headlightInnerPercent  = 0.3f;  // innerSpotAngle = spotAngle * this (0~1)
+        [SerializeField] float   headlightLowPitch      = 5f;    // 하향등 수직 각도 (도)
+        [SerializeField] float   headlightHighPitch      = -2f;  // 상향등 수직 각도 (도)
 
         [Header("브레이크 등")]
         [SerializeField] Light[]    brakeLights;
@@ -72,18 +74,23 @@ namespace CarSim.Vehicle
 
         void UpdateHeadlights()
         {
-            bool on        = _switches.HeadLight;
-            float intensity = _switches.HighBeam
-                ? headlightHighIntensity
-                : headlightLowIntensity;
+            bool  on        = _switches.HeadLight;
+            bool  high      = _switches.HighBeam;
+            float intensity = high ? headlightHighIntensity : headlightLowIntensity;
+            float pitch     = high ? headlightHighPitch     : headlightLowPitch;
 
-            float angle = _switches.HighBeam ? headlightHighAngle : headlightLowAngle;
             foreach (var light in headlights)
             {
                 if (light == null) continue;
-                light.enabled   = on;
-                light.intensity = intensity;
-                light.spotAngle = angle;
+                light.enabled        = on;
+                light.intensity      = intensity;
+                light.spotAngle      = headlightSpotAngle;
+                light.innerSpotAngle = headlightSpotAngle * headlightInnerPercent;
+
+                // 수직 방향(위아래) 조절 — 부모 기준 로컬 X축 회전
+                var angles = light.transform.localEulerAngles;
+                angles.x = pitch;
+                light.transform.localEulerAngles = angles;
             }
         }
 
