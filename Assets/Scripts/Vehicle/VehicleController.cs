@@ -153,8 +153,8 @@ namespace CarSim.Vehicle
             // 휠 질량: 너무 크면 브레이크가 안 먹힘 (타이어+휠 실제 무게 ~20kg)
             w.mass = 20f;
             
-            // 휠 댐핑: 고속 안정성과 응답성의 균형점
-            w.wheelDampingRate = 0.65f;
+            // 휠 댐핑: 너무 높으면 고속에서 롤링 저항 증가
+            w.wheelDampingRate = 0.25f;
             
             // 힘 적용점: 0으로 설정 (Unity 권장, 안정성 최대)
             w.forceAppPointDistance = 0f;  // ↓ 고속 안정성 (0.1 → 0)
@@ -293,7 +293,8 @@ namespace CarSim.Vehicle
             if (clutchDepressed && brakePressed)
             {
                 _engine.StartEngine();
-                CurrentPowerState = PowerState.On; // 시동 걸리면 무조건 ON 상태
+                CurrentPowerState = PowerState.On;
+                if (_switches != null) _switches.SetIgnition(true);
                 Debug.Log("[VC] 시동 시퀀스 시작. 전원 상태: ON");
             }
             // 2. 안 밟고 누르면 OFF -> ACC -> ON -> OFF 순환
