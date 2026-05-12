@@ -95,6 +95,16 @@ InitTestScene*.unity*
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
 
+# Generated map bake outputs
+/[Aa]ssets/StreamingAssets/tiles/
+/[Aa]ssets/StreamingAssets/tiles.meta
+/[Aa]ssets/StreamingAssets/styled_tiles/
+/[Aa]ssets/StreamingAssets/styled_tiles.meta
+/[Aa]ssets/StreamingAssets/road_mask.png
+/[Aa]ssets/StreamingAssets/road_mask.png.meta
+/[Aa]ssets/StreamingAssets/road_graph.json
+/[Aa]ssets/StreamingAssets/road_graph.json.meta
+
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 .contexty
