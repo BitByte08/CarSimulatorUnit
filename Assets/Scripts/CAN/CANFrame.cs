@@ -48,6 +48,10 @@ namespace CarSim.CAN
         // ── Unity → 전체 브로드캐스트 ─────────────
         public const uint VEHICLE_STATE     = 0x500; // [속도][RPM][기어][ABS][TCS]
         public const uint ENGINE_STATE      = 0x501; // [수온][유압][연료]
+
+        // ── Unity → 엔터테인먼트 (지도/위치) ──────
+        public const uint POSITION          = 0x600; // [X int32 BE ×100][Z int32 BE ×100] (8 bytes)
+        public const uint HEADING           = 0x601; // [heading uint16 BE ×10] (2 bytes, 0~3599 = 0.0°~359.9°)
     }
 
     /// <summary>

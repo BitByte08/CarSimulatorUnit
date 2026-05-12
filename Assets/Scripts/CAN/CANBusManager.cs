@@ -27,7 +27,7 @@ namespace CarSim.CAN
 
         [Header("테스트 모드")]
         [Tooltip("실제 하드웨어 없이 루프백으로 테스트")]
-        public bool simulationMode = true;
+        public bool simulationMode = false;
 
         /// <summary>시리얼 포트가 열려 있으면 true</summary>
         public bool IsConnected => _port?.IsOpen == true;

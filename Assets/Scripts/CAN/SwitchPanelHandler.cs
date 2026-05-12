@@ -76,8 +76,6 @@ namespace CarSim.CAN
             // 매 프레임 EngineStart 리셋 (모멘터리)
             EngineStart = false;
 
-            if (!simMode) return;
-
             var kb = Keyboard.current;
             if (kb == null) return;
 
