@@ -40,10 +40,11 @@ namespace CarSim.ADAS
             // 노면 반력 피드백
             float loadFeedback = lateralG * lateralGSensitivity;
 
-            // 센터 복귀 토크 (고속일수록 강함)
-            float returnFB = -steerAngle / 450f * returnTorque * speedNorm;
+            // 센터 복귀 토크: 20 km/h 기준으로 포화 → 10 km/h에서도 50% 작동
+            float returnSpeed = Mathf.Clamp01(_vc.SpeedKph / 20f);
+            float returnFB = -steerAngle / 450f * returnTorque * returnSpeed;
 
-            // 속도 감응 감쇠 (고속 = 무거운 핸들)
+            // 속도 감응 감쇠 (고속 = 무거운 핸들, 정차 시엔 감쇠 없음)
             float damping = -Mathf.Sign(steerAngle) * speedNorm * highSpeedDamping;
 
             float totalFFB = Mathf.Clamp(loadFeedback + returnFB + damping,

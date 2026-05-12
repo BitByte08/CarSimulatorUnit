@@ -44,6 +44,8 @@ namespace CarSim.Vehicle
         [SerializeField] float launchAssistMultiplier = 1.00f;
         [Tooltip("이 속도(km/h)까지 launchAssistMultiplier가 1.0으로 선형 감소")]
         [SerializeField] float launchAssistEndKph = 10f;
+        [Tooltip("토크 벡터링 강도 (0=없음, 0.3=코너 바깥쪽 30% 추가)")]
+        [SerializeField] float tvStrength = 0.3f;
 
         [Header("브레이크")]
         [SerializeField] float maxBrakeTorque  = 1800f;
@@ -356,22 +358,28 @@ namespace CarSim.Vehicle
 
             float perWheel = torque * 0.5f;
 
+            // 토크 벡터링: 코너 바깥쪽에 더, 안쪽에 덜
+            float steerNorm = Mathf.Clamp(wheelFL.steerAngle / maxSteerAngle, -1f, 1f);
+            float bias = Mathf.Abs(steerNorm) * tvStrength;
+            // steerAngle > 0 = 우회전 → 왼쪽이 바깥
+            float leftTorque  = perWheel * (1f + (steerNorm > 0f ?  bias : -bias));
+            float rightTorque = perWheel * (1f + (steerNorm > 0f ? -bias :  bias));
+
             switch (driveType)
             {
                 case DriveType.RWD:
-                    wheelRL.motorTorque = perWheel;
-                    wheelRR.motorTorque = perWheel;
+                    wheelRL.motorTorque = leftTorque;
+                    wheelRR.motorTorque = rightTorque;
                     break;
                 case DriveType.FWD:
-                    wheelFL.motorTorque = perWheel;
-                    wheelFR.motorTorque = perWheel;
+                    wheelFL.motorTorque = leftTorque;
+                    wheelFR.motorTorque = rightTorque;
                     break;
                 case DriveType.AWD:
-                    float awd = torque * 0.25f;
-                    wheelFL.motorTorque = awd;
-                    wheelFR.motorTorque = awd;
-                    wheelRL.motorTorque = awd;
-                    wheelRR.motorTorque = awd;
+                    wheelFL.motorTorque = leftTorque  * 0.5f;
+                    wheelFR.motorTorque = rightTorque * 0.5f;
+                    wheelRL.motorTorque = leftTorque  * 0.5f;
+                    wheelRR.motorTorque = rightTorque * 0.5f;
                     break;
             }
         }
