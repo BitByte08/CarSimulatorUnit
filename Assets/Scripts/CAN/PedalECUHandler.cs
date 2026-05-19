@@ -30,6 +30,7 @@ namespace CarSim.CAN
 
         void OnPedalData(byte[] data)
         {
+            if (simMode) return;
             if (data.Length < 6) return;
             ushort rawThrottle = BitConverter.ToUInt16(data, 0);
             ushort rawBrake    = BitConverter.ToUInt16(data, 2);
@@ -54,11 +55,9 @@ namespace CarSim.CAN
             Brake    = vertical < 0f ? -vertical : 0f;
 
             // 클러치: Left Shift(완전분리), Z(반클러치)
-            float clutchTarget = 1f;
-            if (kb.leftShiftKey.isPressed) clutchTarget = 0f;
-            else if (kb.zKey.isPressed) clutchTarget = 0.45f; // 반클러치 테스트 (BitePoint 위)
-
-            Clutch = Mathf.MoveTowards(Clutch, clutchTarget, Time.deltaTime * 2f);
+            if (kb.leftShiftKey.isPressed) Clutch = 0f;
+            else if (kb.zKey.isPressed) Clutch = 0.45f;
+            else Clutch = 1f;
         }
 
         static float Normalize(ushort val, ushort min, ushort max)

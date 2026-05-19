@@ -42,6 +42,7 @@ namespace CarSim.CAN
 
         void OnSteeringAngleData(byte[] data)
         {
+            if (simMode) return;
             if (data.Length < 2) return;
             
             short raw = BitConverter.ToInt16(data, 0);
