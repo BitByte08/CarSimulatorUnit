@@ -32,6 +32,7 @@ namespace CarSim.CAN
         public const uint STEERING_COLUMN   = 0x101; // uint16 스위치 비트필드 (방향지시등, 와이퍼 등)
         public const uint FFB_TORQUE_CMD    = 0x105; // int16 토크 명령 → OpenFFBoard
         public const uint ENC_ZERO_CMD      = 0x106; // 엔코더 영점 설정 명령 (데이터 없음)
+        public const uint ANGLE_CAL_CMD     = 0x107; // 각도 스케일 캘리브레이션: int16 기준각도×10
 
         // ── 페달 ECU (STM32) ──────────────────────
         public const uint PEDAL_STATUS      = 0x200; // [액셀u16][브레이크u16][클러치u16]

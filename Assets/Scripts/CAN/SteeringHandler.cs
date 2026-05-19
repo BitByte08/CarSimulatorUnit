@@ -25,6 +25,10 @@ namespace CarSim.CAN
         [Header("스티어링 범위")]
         [SerializeField] float maxAngle = 450f;  // 휠 최대 회전각 (±450도)
 
+        [Header("각도 캘리브레이션")]
+        [Tooltip("C키 캘리브레이션 시 STM32에 전달할 기준 각도 (물리적으로 핸들을 이 각도만큼 돌린 상태에서 C 누름)")]
+        [SerializeField] float calibrationAngle = 180f;
+
         [Header("시뮬레이션 모드")]
         [SerializeField] bool simMode = true;
 
@@ -106,6 +110,18 @@ namespace CarSim.CAN
             Debug.Log("[Steering] 엔코더 영점 명령 전송 (0x106)");
         }
 
+        /// <summary>
+        /// CAN 0x107: 각도 스케일 캘리브레이션
+        /// 절차: H로 영점 → 핸들을 calibrationAngle만큼 돌림 → C키
+        /// STM32가 현재 enc_rel과 기준각도를 비교해 g_angle_scale 자동 계산
+        /// </summary>
+        public void CalibrateAngle()
+        {
+            short deg10 = (short)(calibrationAngle * 10f);
+            CANBusManager.Instance.Send(CANID.ANGLE_CAL_CMD, BitConverter.GetBytes(deg10));
+            Debug.Log($"[Steering] 각도 캘리브레이션 전송 (0x107): 기준={calibrationAngle}°");
+        }
+
         void Update()
         {
             var kb = Keyboard.current;
@@ -113,6 +129,8 @@ namespace CarSim.CAN
 
             // H키: 엔코더 영점 (simMode 무관)
             if (kb.hKey.wasPressedThisFrame) ZeroEncoder();
+            // C키: 각도 스케일 캘리브레이션 (H로 영점 후, calibrationAngle만큼 돌리고 C)
+            if (kb.cKey.wasPressedThisFrame) CalibrateAngle();
 
             if (!simMode) return;
 
