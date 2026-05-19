@@ -22,6 +22,7 @@ namespace CarSim.CAN
 
         [Header("시뮬레이션 모드 (키보드 입력)")]
         [SerializeField] bool simMode = true;
+        [SerializeField] float clutchSmoothSpeed = 2f; // 클러치 변화 속도 (초당)
 
         void Start()
         {
@@ -54,10 +55,11 @@ namespace CarSim.CAN
             Throttle = vertical > 0f ?  vertical : 0f;
             Brake    = vertical < 0f ? -vertical : 0f;
 
-            // 클러치: Left Shift(완전분리), Z(반클러치)
-            if (kb.leftShiftKey.isPressed) Clutch = 0f;
-            else if (kb.zKey.isPressed) Clutch = 0.45f;
-            else Clutch = 1f;
+            // 클러치: Left Shift(완전분리), Z(반클러치) — 부드럽게 변화
+            float clutchTarget = 1f;
+            if (kb.leftShiftKey.isPressed) clutchTarget = 0f;
+            else if (kb.zKey.isPressed) clutchTarget = 0.45f;
+            Clutch = Mathf.MoveTowards(Clutch, clutchTarget, Time.deltaTime * clutchSmoothSpeed);
         }
 
         static float Normalize(ushort val, ushort min, ushort max)
