@@ -32,6 +32,9 @@ namespace CarSim.CAN
         [Header("시뮬레이션 모드")]
         [SerializeField] bool simMode = true;
 
+        float _rawAngle;   // STM32에서 받은 스케일 보정 후 원시 각도
+        float _angleZero;  // H키로 설정한 로컬 영점 오프셋
+
         // 편의 프로퍼티
         public bool TurnLeft => ColumnSwitches.HasFlag(SwitchFlags.TurnLeft);
         public bool TurnRight => ColumnSwitches.HasFlag(SwitchFlags.TurnRight);
@@ -82,9 +85,10 @@ namespace CarSim.CAN
         {
             if (simMode) return;
             if (data.Length < 2) return;
-            
+
             short raw = BitConverter.ToInt16(data, 0);
-            SteeringAngle = raw / 10f;
+            _rawAngle = raw / 10f;
+            SteeringAngle = _rawAngle - _angleZero;
         }
 
         /// <summary>
@@ -106,8 +110,10 @@ namespace CarSim.CAN
         /// </summary>
         public void ZeroEncoder()
         {
-            CANBusManager.Instance.Send(CANID.ENC_ZERO_CMD, new byte[1]);
-            Debug.Log("[Steering] 엔코더 영점 명령 전송 (0x106)");
+            _angleZero = _rawAngle;  // Unity 로컬 영점 (CAN 불필요)
+            SteeringAngle = 0f;
+            CANBusManager.Instance.Send(CANID.ENC_ZERO_CMD, new byte[1]); // STM32 엔드스탑 기준도 동기화
+            Debug.Log($"[Steering] 영점 설정: rawAngle={_rawAngle:F1}° → 0°");
         }
 
         /// <summary>
