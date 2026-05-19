@@ -54,8 +54,8 @@ namespace CarSim.ADAS
             // 노면 반력 피드백
             float loadFeedback = lateralG * lateralGSensitivity;
 
-            // 속도 기반 복귀력: 정차 시 0, 속도 오를수록 증가 (실제 캐스터 효과)
-            float returnBase = Mathf.Clamp01(_vc.SpeedKph / 60f);
+            // 속도 기반 복귀력: 정차 시 0, 20 km/h에서 100% (실제 캐스터 효과)
+            float returnBase = Mathf.Clamp01(_vc.SpeedKph / 20f);
             float returnFB = -steerNorm * returnTorque * returnBase;
 
             // 속도 감응 감쇠 (고속 = 무거운 핸들, 정차 시엔 감쇠 없음)
@@ -66,8 +66,8 @@ namespace CarSim.ADAS
             float totalFFB = Mathf.Clamp(loadFeedback + returnFB + damping,
                                          -maxFeedbackTorque, maxFeedbackTorque);
 
-            // 최소 FFB 보장: 주행 중 + 핸들 꺾여 있을 때만 (정차 시 불필요)
-            if (minFFBTorque > 0f && _vc.SpeedKph > 5f && Mathf.Abs(steerAngle) > 5f && Mathf.Abs(totalFFB) < minFFBTorque)
+            // 최소 FFB 보장: 2 km/h 이상 + 핸들 꺾여 있을 때 (정지 시만 제외)
+            if (minFFBTorque > 0f && _vc.SpeedKph > 2f && Mathf.Abs(steerAngle) > 5f && Mathf.Abs(totalFFB) < minFFBTorque)
                 totalFFB = -Mathf.Sign(steerAngle) * minFFBTorque;
 
             // → OpenFFBoard로 CAN 송신
