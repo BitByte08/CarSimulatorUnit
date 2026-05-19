@@ -18,7 +18,9 @@ namespace CarSim.ADAS
         [SerializeField] float highSpeedDamping  = 0.3f;   // 고속 감쇠
         [SerializeField] float lateralGSensitivity = 0.8f;
         [Tooltip("최소 FFB 토크 (정규화). 핸들이 치우쳐 있을 때 최소한 이만큼 복귀력 적용")]
-        [SerializeField] float minFFBTorque = 0.3f;  // 30% 최소 (모터 정지마찰 극복)
+        [SerializeField] float minFFBTorque = 0.7f;  // 70% 최소 (저속 센터링 보장)
+        [Tooltip("엔드스탑 저항 강도. 최대 조향각 초과 시 반력 계수")]
+        [SerializeField] float hardStopStiffness = 3.0f;
         
         [Header("테스트 모드")]
         [Tooltip("0이면 정상 동작, 양수면 오른쪽으로, 음수면 왼쪽으로 고정 토크 계속 전송")]
@@ -51,24 +53,32 @@ namespace CarSim.ADAS
             float steerAngle  = _steering.SteeringAngle;
             float steerNorm   = steerAngle / 450f; // -1 ~ 1
 
-            // 노면 반력 피드백
-            float loadFeedback = lateralG * lateralGSensitivity;
+            float totalFFB = 0f;
 
-            // 속도 기반 복귀력: 정차 시 0, 20 km/h에서 100% (실제 캐스터 효과)
-            float returnBase = Mathf.Clamp01(_vc.SpeedKph / 20f);
-            float returnFB = -steerNorm * returnTorque * returnBase;
+            // 5 km/h 미만 = 센터링 없음 (정차 시 완전 비활성)
+            if (_vc.SpeedKph >= 5f)
+            {
+                // 속도 비율: 5 km/h=0%, 30 km/h=100%
+                float speedScale  = Mathf.Clamp01(_vc.SpeedKph / 30f);
 
-            // 속도 감응 감쇠 (고속 = 무거운 핸들, 정차 시엔 감쇠 없음)
-            float damping = steerAngle != 0f
-                ? -Mathf.Sign(steerAngle) * speedNorm * highSpeedDamping
-                : 0f;
+                // 센터 복귀 (횡G 기반 자연 각도를 향해)
+                float naturalNorm = Mathf.Clamp(lateralG * lateralGSensitivity, -1f, 1f);
+                float returnFB    = -(steerNorm - naturalNorm) * returnTorque * speedScale;
 
-            float totalFFB = Mathf.Clamp(loadFeedback + returnFB + damping,
-                                         -maxFeedbackTorque, maxFeedbackTorque);
+                // 고속 감쇠
+                float damping = -Mathf.Sign(steerAngle) * speedNorm * highSpeedDamping;
 
-            // 최소 FFB 보장: 2 km/h 이상 + 핸들 꺾여 있을 때 (정지 시만 제외)
-            if (minFFBTorque > 0f && _vc.SpeedKph > 2f && Mathf.Abs(steerAngle) > 5f && Mathf.Abs(totalFFB) < minFFBTorque)
-                totalFFB = -Mathf.Sign(steerAngle) * minFFBTorque;
+                totalFFB = Mathf.Clamp(returnFB + damping, -maxFeedbackTorque, maxFeedbackTorque);
+
+                // 최소 토크 보장 (속도 비례 — 급격한 점프 없음)
+                float minFFB = minFFBTorque * speedScale;
+                if (Mathf.Abs(steerAngle) > 5f && Mathf.Abs(totalFFB) < minFFB)
+                    totalFFB = -Mathf.Sign(steerAngle) * minFFB;
+            }
+
+            // 엔드스탑: 속도 무관, 450° 초과 즉시 최대 반력
+            if (Mathf.Abs(steerAngle) > 450f)
+                totalFFB = -Mathf.Sign(steerAngle) * maxFeedbackTorque;
 
             // → OpenFFBoard로 CAN 송신
             float sendTorque = testForceTorque != 0f ? testForceTorque : totalFFB;
