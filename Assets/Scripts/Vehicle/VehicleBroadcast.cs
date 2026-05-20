@@ -50,6 +50,8 @@ namespace CarSim.Vehicle
         [SerializeField] float engineStatePeriod = 0.20f;   // 0x501          5 Hz
         [SerializeField] float warningPeriod     = 0.50f;   // 0x401          2 Hz
         [SerializeField] float positionPeriod    = 0.10f;   // 0x600, 0x601  10 Hz
+        [SerializeField] float dynamicsPeriod    = 0.05f;   // 0x502         20 Hz
+        [SerializeField] float adasPeriod        = 0.20f;   // 0x503          5 Hz
 
         [Header("연료 시뮬레이션")]
         [SerializeField] float fuelCapacityLiters  = 50f;
@@ -72,6 +74,8 @@ namespace CarSim.Vehicle
         float _tEngine;
         float _tWarning;
         float _tPosition;
+        float _tDynamics;
+        float _tAdas;
 
         // ── Unity 생명주기 ───────────────────────────────────────────────────
 
@@ -117,6 +121,16 @@ namespace CarSim.Vehicle
                 _tPosition = now;
                 SendPosition();
                 SendHeading();
+            }
+            if (now - _tDynamics >= dynamicsPeriod)
+            {
+                _tDynamics = now;
+                SendDrivingDynamics();
+            }
+            if (now - _tAdas >= adasPeriod)
+            {
+                _tAdas = now;
+                SendADASStatus();
             }
         }
 
@@ -206,6 +220,39 @@ namespace CarSim.Vehicle
             {
                 (byte)(warn & 0xFF), (byte)(warn >> 8),
             });
+        }
+
+        void SendDrivingDynamics()
+        {
+            // 0x502: [TransmittedTorque i16 Nm][LateralG×100 i16][LongitudinalG×100 i16][reserved 2B]
+            short torque = (short)Mathf.Clamp(_trans.TransmittedTorque, -32767f, 32767f);
+            short latG   = (short)Mathf.Clamp(_vc.LateralG      * 100f, -32767f, 32767f);
+            short lonG   = (short)Mathf.Clamp(_vc.LongitudinalG * 100f, -32767f, 32767f);
+            CANBusManager.Instance.Send(CANID.DRIVING_DYNAMICS, new byte[]
+            {
+                (byte)(torque >> 8), (byte)(torque & 0xFF),
+                (byte)(latG   >> 8), (byte)(latG   & 0xFF),
+                (byte)(lonG   >> 8), (byte)(lonG   & 0xFF),
+                0, 0,
+            });
+        }
+
+        void SendADASStatus()
+        {
+            // 0x503: [flags: bit0=ABS,bit1=TCS][wheelLock: bit0=FL,bit1=FR,bit2=RL,bit3=RR]
+            byte flags = 0;
+            if (_abs != null && _abs.IsActive) flags |= 0x01;
+
+            byte wheelLock = 0;
+            if (_abs?.WheelLocked != null)
+            {
+                var wl = _abs.WheelLocked;
+                if (wl.Length > 0 && wl[0]) wheelLock |= 0x01; // FL
+                if (wl.Length > 1 && wl[1]) wheelLock |= 0x02; // FR
+                if (wl.Length > 2 && wl[2]) wheelLock |= 0x04; // RL
+                if (wl.Length > 3 && wl[3]) wheelLock |= 0x08; // RR
+            }
+            CANBusManager.Instance.Send(CANID.ADAS_STATUS, new byte[] { flags, wheelLock });
         }
 
         void SendPosition()

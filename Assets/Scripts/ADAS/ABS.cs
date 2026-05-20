@@ -20,6 +20,8 @@ namespace CarSim.ADAS
         [SerializeField] float  pulseFrequency = 10f;    // ABS 펄스 빈도 (Hz)
 
         public bool IsActive { get; private set; }
+        /// <summary>휠별 잠금 상태 [FL, FR, RL, RR] — VehicleBroadcast에서 읽음</summary>
+        public bool[] WheelLocked => _wheelLocked;
 
         VehicleController _vc;
         WheelCollider[]   _wheels;

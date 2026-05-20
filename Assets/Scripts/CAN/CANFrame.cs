@@ -48,8 +48,10 @@ namespace CarSim.CAN
         public const uint INFO_CMD          = 0x402; // 라즈베리파이→Unity 명령
 
         // ── Unity → 전체 브로드캐스트 ─────────────
-        public const uint VEHICLE_STATE     = 0x500; // [속도][RPM][기어][ABS][TCS]
-        public const uint ENGINE_STATE      = 0x501; // [수온][유압][연료]
+        public const uint VEHICLE_STATE      = 0x500; // [속도][RPM][기어][ABS][TCS]
+        public const uint ENGINE_STATE       = 0x501; // [수온][유압][연료]
+        public const uint DRIVING_DYNAMICS   = 0x502; // [TransmittedTorque i16][LateralG×100 i16][LongitudinalG×100 i16]
+        public const uint ADAS_STATUS        = 0x503; // [flags: ABS/TCS][wheelLock: FL/FR/RL/RR bits]
 
         // ── Unity → 엔터테인먼트 (지도/위치) ──────
         public const uint POSITION          = 0x600; // [X int32 BE ×100][Z int32 BE ×100] (8 bytes)
