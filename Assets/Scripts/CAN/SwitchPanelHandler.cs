@@ -20,8 +20,10 @@ namespace CarSim.CAN
 
         // 편의 프로퍼티 — 패널 OR 스티어링 컬럼 둘 중 하나라도 켜지면 true
         public bool IgnitionOn  => Switches.HasFlag(SwitchFlags.Ignition);
-        /// <summary>E키를 누른 프레임에만 true (모멘터리)</summary>
+        /// <summary>E키 또는 CAN Engine 비트 rising edge 프레임에만 true (모멘터리)</summary>
         public bool EngineStart { get; private set; }
+
+        bool _prevEngineCANBit;
         public bool HeadLight   => Switches.HasFlag(SwitchFlags.HeadLight);
         public bool HighBeam    => Switches.HasFlag(SwitchFlags.HighBeam);
         public bool Hazard      => Combined.HasFlag(SwitchFlags.Hazard);
@@ -56,7 +58,15 @@ namespace CarSim.CAN
         void OnSwitchData(byte[] data)
         {
             if (data.Length < 2) return;
-            Switches = (SwitchFlags)BitConverter.ToUInt16(data, 0);
+            var newFlags = (SwitchFlags)BitConverter.ToUInt16(data, 0);
+
+            // Engine 비트 rising edge → EngineStart 트리거 (엔터테인먼트 버튼 연동)
+            bool newEngine = newFlags.HasFlag(SwitchFlags.Engine);
+            if (newEngine && !_prevEngineCANBit)
+                EngineStart = true;
+            _prevEngineCANBit = newEngine;
+
+            Switches = newFlags;
         }
 
         void OnGearData(byte[] data)
@@ -79,7 +89,7 @@ namespace CarSim.CAN
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            // 시동: E키 누른 프레임에만 ON
+            // 시동: E키 누른 프레임에만 ON (CAN rising edge는 OnSwitchData에서 처리)
             if (kb.eKey.wasPressedThisFrame)
                 EngineStart = true;
 
