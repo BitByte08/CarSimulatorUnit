@@ -71,6 +71,8 @@ namespace CarSim.Vehicle
             _abs    = GetComponent<ABS>();
 
             _fuelLiters = fuelCapacityLiters;
+
+            Debug.Log($"[VehicleBroadcast] Awake on '{gameObject.name}' — engine={(_engine != null ? _engine.gameObject.name : "NULL")}");
         }
 
         void FixedUpdate()
@@ -126,6 +128,8 @@ namespace CarSim.Vehicle
             ushort speed = (ushort)Mathf.Clamp(_vc.SpeedKph * 10f, 0f, 65535f);
             ushort rpm   = (ushort)Mathf.Clamp(_engine.RPM,         0f, 65535f);
 
+            Debug.Log($"[VehicleBroadcast] 0x400 TX  speed={_vc.SpeedKph:F1}km/h  rpm={rpm}  obj='{gameObject.name}'");
+
             // Big-Endian: EntertainmentCluster 파싱 포맷
             CANBusManager.Instance.Send(CANID.INFO_SPEED_RPM, new byte[]
             {
@@ -146,16 +150,16 @@ namespace CarSim.Vehicle
             byte flags = 0;
             if (_abs != null && _abs.IsActive) flags |= 0x01;
 
-            // bytes 0-3: speed+RPM (Big-Endian, 클러스터 호환)
+            // bytes 0-1: speed × 10 (uint16 BE)
+            // bytes 2-3: RPM       (uint16 BE)
             // byte  4  : gear
-            // byte  5  : flags
+            // byte  5  : flags (bit0=ABS, bit1=TCS)
             CANBusManager.Instance.Send(CANID.VEHICLE_STATE, new byte[]
             {
                 (byte)(speed >> 8), (byte)(speed & 0xFF),
                 (byte)(rpm   >> 8), (byte)(rpm   & 0xFF),
                 gearByte,
                 flags,
-                0, 0,
             });
         }
 

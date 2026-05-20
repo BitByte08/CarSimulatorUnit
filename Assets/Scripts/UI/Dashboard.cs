@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using CarSim.Vehicle;
 using CarSim.ADAS;
-using CarSim.CAN;
 
 namespace CarSim.UI
 {
@@ -51,9 +50,6 @@ namespace CarSim.UI
         TCS                _tcs;
         ESC                _esc;
 
-        float _canSendTimer;
-        const float CAN_SEND_INTERVAL = 0.05f; // 20Hz
-
         void Awake()
         {
             var car = FindObjectOfType<VehicleController>();
@@ -74,7 +70,6 @@ namespace CarSim.UI
             UpdateRPM();
             UpdateGear();
             UpdateWarningLights();
-            SendCANTelemetry();
         }
 
         void UpdateSpeedometer()
@@ -116,29 +111,5 @@ namespace CarSim.UI
             if (img) img.color = on ? warningOn : warningOff;
         }
 
-        void SendCANTelemetry()
-        {
-            _canSendTimer -= Time.deltaTime;
-            if (_canSendTimer > 0f) return;
-            _canSendTimer = CAN_SEND_INTERVAL;
-
-            if (CANBusManager.Instance == null) return;
-
-            // 0x400: [속도 u16 ×10][RPM u16] → 라즈베리파이
-            ushort speedVal = (ushort)(_vc.SpeedKph * 10f);
-            ushort rpmVal   = (ushort)(_engine != null ? _engine.RPM : 0f);
-            byte[] data400  = new byte[4];
-            System.BitConverter.GetBytes(speedVal).CopyTo(data400, 0);
-            System.BitConverter.GetBytes(rpmVal  ).CopyTo(data400, 2);
-            CANBusManager.Instance.Send(CANID.INFO_SPEED_RPM, data400);
-
-            // 0x401: 경고등 비트필드
-            byte warn = 0;
-            if (_abs  != null && _abs.IsActive)  warn |= 1;
-            if (_tcs  != null && _tcs.IsActive)  warn |= 2;
-            if (_esc  != null && _esc.IsActive)  warn |= 4;
-            if (_engine != null && _engine.IsStalled) warn |= 8;
-            CANBusManager.Instance.Send(CANID.INFO_WARNING, new[] { warn });
-        }
     }
 }

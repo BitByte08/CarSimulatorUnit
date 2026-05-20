@@ -22,18 +22,23 @@ namespace CarSim.Editor
     {
         enum BoundsMode { AutoDetect, SceneCamera, Manual }
 
-        // ── 도로 재질 이름 목록 ──────────────────────────────────────────────────
+        // ── 실제 주행 도로 재질: 밝기(회색조)로 렌더 ────────────────────────────────
         static readonly string[] kRoadMaterials =
         {
             "asphalt_2_tracks",
             "asphalt_2-5_tracks",
             "asphalt_4_tracks",
-            "asphalt_square",
-            "asphalt_extra",
+            "asphalt_extra",    // 시내 도로에 사용됨 → 도로로 처리
             "asphalt_highway",
         };
 
-        // 재질별 밝기: 고속도로일수록 밝게 → Python 쪽에서 도로 등급 구분 가능
+        // 건물 바닥에 사용되는 재질: 파란색으로 렌더 → Python에서 완전 제외
+        static readonly string[] kSquareMaterials =
+        {
+            "asphalt_square",
+        };
+
+        // 도로 재질별 밝기: 고속도로일수록 밝게 → Python 쪽에서 도로 등급 구분 가능
         static readonly System.Collections.Generic.Dictionary<string, float> kRoadBrightness =
             new System.Collections.Generic.Dictionary<string, float>
             {
@@ -41,8 +46,7 @@ namespace CarSim.Editor
                 { "asphalt_4_tracks",   0.80f },  // 4차선
                 { "asphalt_2-5_tracks", 0.65f },  // 2.5차선
                 { "asphalt_2_tracks",   0.65f },  // 2차선
-                { "asphalt_square",     0.60f },  // 교차로/광장
-                { "asphalt_extra",      0.55f },  // 기타
+                { "asphalt_extra",      0.60f },  // 시내 도로
             };
 
         // ── 설정 ─────────────────────────────────────────────────────────────
@@ -184,7 +188,7 @@ namespace CarSim.Editor
 
             foreach (var rend in allRenderers)
             {
-                if (!IsRoadRenderer(rend, out _)) continue;
+                if (!IsAnyAsphaltRenderer(rend, out _)) continue;
 
                 if (!init)
                 {
@@ -244,29 +248,44 @@ namespace CarSim.Editor
                 cameraY = camH;
             }
 
-            // 1. 씬의 모든 Renderer 수집
+            // 1. 씬의 모든 Renderer 비활성화
             var allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-
-            // 2. 도로 Renderer 분류
-            var roadRenderers  = new List<(Renderer r, Material[] origMats)>();
-            var otherRenderers = new List<Renderer>();
-
             foreach (var rend in allRenderers)
+                rend.enabled = false;
+
+            // 2. city_part_collider MeshCollider 메시를 임시 MeshRenderer로 렌더
+            //    → 재질 이름에 의존하지 않고 콜라이더 메시(도로와 완벽히 일치)를 사용
+            var tempObjects = new List<GameObject>();
+            var allColliders = FindObjectsByType<MeshCollider>(FindObjectsSortMode.None);
+            foreach (var mc in allColliders)
             {
-                if (IsRoadRenderer(rend, out _))
-                {
-                    roadRenderers.Add((rend, rend.sharedMaterials));
-                    rend.sharedMaterials = BuildFlatMaterials(rend.sharedMaterials);
-                }
-                else
-                {
-                    otherRenderers.Add(rend);
-                }
+                if (mc.sharedMesh == null) continue;
+                if (!mc.gameObject.name.Contains("city_part_collider")) continue;
+
+                var tempGo = new GameObject("__RoadMeshTemp__");
+                tempGo.hideFlags = HideFlags.HideAndDontSave;
+                tempGo.transform.position   = mc.transform.position;
+                tempGo.transform.rotation   = mc.transform.rotation;
+                tempGo.transform.localScale = mc.transform.lossyScale;
+
+                var mf = tempGo.AddComponent<MeshFilter>();
+                mf.sharedMesh = mc.sharedMesh;
+
+                var mr = tempGo.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = BuildFlatMaterial(new Color(1f, 1f, 1f, 1f));
+
+                tempObjects.Add(tempGo);
+                Debug.Log($"[RoadMaskBaker] 도로 콜라이더 렌더: {mc.gameObject.name}");
             }
 
-            // 3. 비도로 오브젝트 비활성화
-            foreach (var rend in otherRenderers)
-                rend.enabled = false;
+            if (tempObjects.Count == 0)
+            {
+                foreach (var rend in allRenderers) if (rend != null) rend.enabled = true;
+                EditorUtility.DisplayDialog("RoadMaskBaker",
+                    "city_part_collider MeshCollider를 찾지 못했습니다.\n" +
+                    "씬에 demo_city_by_versatile_studio 프리팹이 있는지 확인하세요.", "확인");
+                return;
+            }
 
             // 4. 카메라 설정
             var camGo = new GameObject("__RoadMaskCamera__");
@@ -324,9 +343,9 @@ namespace CarSim.Editor
             finally
             {
                 // 7. 복원
-                foreach (var (rend, origMats) in roadRenderers)
-                    if (rend != null) rend.sharedMaterials = origMats;
-                foreach (var rend in otherRenderers)
+                foreach (var go in tempObjects)
+                    if (go != null) DestroyImmediate(go);
+                foreach (var rend in allRenderers)
                     if (rend != null) rend.enabled = true;
                 DestroyImmediate(camGo);
                 EditorUtility.ClearProgressBar();
@@ -342,33 +361,61 @@ namespace CarSim.Editor
                 string matName = CleanMaterialName(mat.name);
                 foreach (var name in kRoadMaterials)
                 {
-                    if (matName == name)
-                    {
-                        matchedMat = name;
-                        return true;
-                    }
+                    if (matName == name) { matchedMat = name; return true; }
                 }
             }
             return false;
         }
 
-        static Material[] BuildFlatMaterials(Material[] origMats)
+        // AutoDetectRoadBounds 용: 실제 도로 + 광장 재질 모두 포함
+        static bool IsAnyAsphaltRenderer(Renderer rend, out string matchedMat)
         {
-            // URP Unlit 셰이더로 단색 재질 생성
+            if (IsRoadRenderer(rend, out matchedMat)) return true;
+            if (IsSquareRenderer(rend)) { matchedMat = "asphalt_square"; return true; }
+            return false;
+        }
+
+        static bool IsSquareRenderer(Renderer rend)
+        {
+            foreach (var mat in rend.sharedMaterials)
+            {
+                if (mat == null) continue;
+                string matName = CleanMaterialName(mat.name);
+                foreach (var name in kSquareMaterials)
+                {
+                    if (matName == name) return true;
+                }
+            }
+            return false;
+        }
+
+        static Material[] BuildFlatMaterials(Material[] origMats, bool isSquare)
+        {
             var result = new Material[origMats.Length];
             for (int i = 0; i < result.Length; i++)
             {
-                string matName = origMats[i] != null ? CleanMaterialName(origMats[i].name) : "";
-                float brightness = kRoadBrightness.TryGetValue(matName, out float b) ? b : 0f;
-                result[i] = BuildFlatMaterial(brightness);
+                Color color;
+                if (isSquare)
+                {
+                    // 파란색: 교차로/광장 표시 → Python이 blue 채널로 감지 후
+                    // 실제 도로에 연결된 부분만 도로망에 포함
+                    color = new Color(0f, 0f, 1f, 1f);
+                }
+                else
+                {
+                    string matName = origMats[i] != null ? CleanMaterialName(origMats[i].name) : "";
+                    float brightness = kRoadBrightness.TryGetValue(matName, out float b) ? b : 0f;
+                    color = new Color(brightness, brightness, brightness, 1f);
+                }
+                result[i] = BuildFlatMaterial(color);
             }
             return result;
         }
 
-        static Material BuildFlatMaterial(float brightness)
+        static Material BuildFlatMaterial(Color color)
         {
             var flatMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            flatMat.color = new Color(brightness, brightness, brightness, 1f);
+            flatMat.color = color;
             return flatMat;
         }
 
