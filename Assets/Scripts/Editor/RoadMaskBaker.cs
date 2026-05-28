@@ -329,6 +329,13 @@ namespace CarSim.Editor
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                 File.WriteAllBytes(outputPath, tex.EncodeToPNG());
 
+                string boundsPath = Path.ChangeExtension(outputPath, ".bounds.json");
+                string boundsJson =
+                    $"{{\"min_x\":{worldMinX:F3},\"max_x\":{worldMaxX:F3}," +
+                    $"\"min_z\":{worldMinZ:F3},\"max_z\":{worldMaxZ:F3}," +
+                    $"\"camera_y\":{cameraY:F3},\"image_size\":{imageSize}}}";
+                File.WriteAllText(boundsPath, boundsJson);
+
                 cam.targetTexture    = null;
                 RenderTexture.active = null;
                 DestroyImmediate(rt);
@@ -336,9 +343,11 @@ namespace CarSim.Editor
 
                 AssetDatabase.Refresh();
                 EditorUtility.DisplayDialog("Road Mask Baker",
-                    $"완료!\n{outputPath}\n{imageSize}×{imageSize} px\n\n" +
-                    "다음 단계:\n  python tools/extract_road_graph.py", "확인");
+                    $"완료!\n{outputPath}\n{imageSize}×{imageSize} px\n" +
+                    $"bounds: X[{worldMinX:F1},{worldMaxX:F1}] Z[{worldMinZ:F1},{worldMaxZ:F1}]\n\n" +
+                    "다음 단계:\n  bash tools/bake_map.sh", "확인");
                 Debug.Log($"[RoadMaskBaker] 저장 완료: {outputPath}");
+                Debug.Log($"[RoadMaskBaker] bounds sidecar: {boundsPath}");
             }
             finally
             {
