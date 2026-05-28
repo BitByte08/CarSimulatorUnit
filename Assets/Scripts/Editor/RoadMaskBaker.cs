@@ -226,6 +226,24 @@ namespace CarSim.Editor
         {
             if (boundsMode == BoundsMode.AutoDetect)
             {
+                // StyledMapTileBaker가 저장한 tiles/bounds.json 있으면 그 bounds로 덮어쓰기
+                string styledBoundsPath = Path.Combine(
+                    Path.GetDirectoryName(outputPath) ?? "", "styled_tiles", "bounds.json");
+                if (File.Exists(styledBoundsPath))
+                {
+                    try
+                    {
+                        var styledBounds = JsonUtility.FromJson<StyledBounds>(
+                            File.ReadAllText(styledBoundsPath));
+                        worldMinX = (float)(styledBounds.min_x - 20);
+                        worldMaxX = (float)(styledBounds.max_x + 20);
+                        worldMinZ = (float)(styledBounds.min_z - 20);
+                        worldMaxZ = (float)(styledBounds.max_z + 20);
+                        Debug.Log($"[RoadMaskBaker] StyledMapTileBaker bounds 감지: X[{worldMinX:F1},{worldMaxX:F1}] Z[{worldMinZ:F1},{worldMaxZ:F1}]");
+                    }
+                    catch {}
+                }
+
                 if (!AutoDetectRoadBounds())
                 {
                     EditorUtility.DisplayDialog("RoadMaskBaker",
@@ -431,6 +449,15 @@ namespace CarSim.Editor
         static string CleanMaterialName(string name)
         {
             return name.Replace(" (Instance)", "").Trim();
+        }
+
+        [System.Serializable]
+        private class StyledBounds
+        {
+            public double min_x;
+            public double max_x;
+            public double min_z;
+            public double max_z;
         }
     }
 }
