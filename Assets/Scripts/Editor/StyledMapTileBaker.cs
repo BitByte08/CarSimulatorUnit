@@ -336,6 +336,15 @@ namespace CarSim.Editor
             try
             {
                 BakeTilesWithCamera(cam);
+
+                string boundsPath = Path.Combine(outputPath, "bounds.json");
+                string boundsJson =
+                    $"{{\"min_x\":{worldMinX:F3},\"max_x\":{worldMaxX:F3}," +
+                    $"\"min_z\":{worldMinZ:F3},\"max_z\":{worldMaxZ:F3}," +
+                    $"\"camera_y\":{cameraY:F3},\"tile_size\":{tileSize}," +
+                    $"\"max_zoom\":{maxZoom}}}";
+                File.WriteAllText(boundsPath, boundsJson);
+                Debug.Log($"[StyledMapTileBaker] bounds sidecar: {boundsPath}");
             }
             finally
             {
