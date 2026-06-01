@@ -25,6 +25,7 @@ namespace CarSim.Camera
         [SerializeField] float idleVibrFreq = 25f;
 
         [Header("마우스 시점 조작")]
+        [SerializeField] bool  enableMouseLook  = false;
         [SerializeField] float mouseSensitivity = 2f;
         [SerializeField] float maxPitchUp       = 30f;
         [SerializeField] float maxPitchDown     = 20f;
@@ -53,21 +54,27 @@ namespace CarSim.Camera
             // 로컬 기준 위치 저장 (이것으로부터 오프셋 적용)
             _baseLocalPos = transform.localPosition;
 
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible   = false;
+            if (enableMouseLook)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible   = false;
+            }
         }
 
         void LateUpdate()
         {
-            // ── 마우스 시점 ───────────────────────────
-            var mouse = Mouse.current;
-            if (mouse != null)
+            // ── 마우스 시점 (선택) ────────────────────
+            if (enableMouseLook)
             {
-                Vector2 delta = mouse.delta.ReadValue();
-                _yaw   +=  delta.x * mouseSensitivity * 0.1f;
-                _pitch -=  delta.y * mouseSensitivity * 0.1f;
-                _yaw    = Mathf.Clamp(_yaw,   -maxYaw,       maxYaw);
-                _pitch  = Mathf.Clamp(_pitch, -maxPitchDown,  maxPitchUp);
+                var mouse = Mouse.current;
+                if (mouse != null)
+                {
+                    Vector2 delta = mouse.delta.ReadValue();
+                    _yaw   +=  delta.x * mouseSensitivity * 0.1f;
+                    _pitch -=  delta.y * mouseSensitivity * 0.1f;
+                    _yaw    = Mathf.Clamp(_yaw,   -maxYaw,       maxYaw);
+                    _pitch  = Mathf.Clamp(_pitch, -maxPitchDown,  maxPitchUp);
+                }
             }
 
             // ── G력 헤드 움직임 ────────────────────────
@@ -97,11 +104,14 @@ namespace CarSim.Camera
 
             // ── 카메라 위치/회전 적용 (로컈 코오디네이트 — Rigidbody 물리와 충돌 없음) ──
             transform.localPosition = _baseLocalPos + _headOffset;
-            transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            if (enableMouseLook)
+                transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
         void Update()
         {
+            if (!enableMouseLook) return;
+
             // ESC: 커서 토글
             var kb = Keyboard.current;
             if (kb != null && kb.escapeKey.wasPressedThisFrame)
