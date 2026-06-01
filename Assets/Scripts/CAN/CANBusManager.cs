@@ -52,6 +52,57 @@ namespace CarSim.CAN
 
         void Start()
         {
+            LoadSettings();
+            if (simulationMode)
+            {
+                Debug.Log("[CAN] 시뮬레이션 모드 (루프백)");
+                return;
+            }
+            Connect();
+        }
+
+        // ── 설정 영속화 (빌드에서 USB 포트 변경용) ──────────────────────────
+
+        const string PrefPort = "can.port";
+        const string PrefBaud = "can.baud";
+        const string PrefSim  = "can.sim";
+
+        public string PortName => portName;
+        public int    BaudRate => baudRate;
+        public bool   SimulationMode => simulationMode;
+
+        void LoadSettings()
+        {
+            portName = PlayerPrefs.GetString(PrefPort, portName);
+            baudRate = PlayerPrefs.GetInt(PrefBaud, baudRate);
+            if (PlayerPrefs.HasKey(PrefSim))
+                simulationMode = PlayerPrefs.GetInt(PrefSim) != 0;
+        }
+
+        /// <summary>UI에서 호출: 포트/보드레이트/모드 저장 후 재연결.</summary>
+        public void ApplySettings(string port, int baud, bool sim)
+        {
+            portName       = string.IsNullOrEmpty(port) ? portName : port;
+            baudRate       = baud > 0 ? baud : baudRate;
+            simulationMode = sim;
+
+            PlayerPrefs.SetString(PrefPort, portName);
+            PlayerPrefs.SetInt(PrefBaud, baudRate);
+            PlayerPrefs.SetInt(PrefSim, simulationMode ? 1 : 0);
+            PlayerPrefs.Save();
+
+            Reconnect();
+        }
+
+        /// <summary>기존 연결을 닫고 현재 설정으로 다시 연결한다.</summary>
+        public void Reconnect()
+        {
+            _running = false;
+            _rxThread?.Join(300);
+            if (_port?.IsOpen == true) _port.Close();
+            _port?.Dispose();
+            _port = null;
+
             if (simulationMode)
             {
                 Debug.Log("[CAN] 시뮬레이션 모드 (루프백)");
