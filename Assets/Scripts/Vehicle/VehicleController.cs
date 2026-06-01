@@ -51,6 +51,10 @@ namespace CarSim.Vehicle
         [SerializeField] float maxBrakeTorque  = 1800f;
         [SerializeField] float handBrakeTorque = 4000f;
 
+        [Header("공기저항")]
+        [Tooltip("v² 비례 공기저항 계수 — 현실적 최고속 제한 (클수록 최고속 낮아짐)")]
+        [SerializeField] float aeroDragCoeff = 0.43f;
+
         [Header("저속 안정화")]
         [Tooltip("스로틀/브레이크 입력이 거의 없고 저속일 때 정차 유지용 브레이크 토크")]
         [SerializeField] float idleHoldBrakeTorque = 380f;
@@ -265,6 +269,7 @@ namespace CarSim.Vehicle
             ApplySteering();
             ApplyAntiRollBars();
             if (_abs == null) ApplyBrakes();  // ABS 있으면 ABS.FixedUpdate가 브레이크 처리
+            ApplyAeroDrag();
             SyncWheelMeshes();
         }
 
@@ -344,12 +349,8 @@ namespace CarSim.Vehicle
         void ApplyDrive()
         {
             // TransmittedTorque 는 양수(구동) 또는 음수(엔진 브레이크) 모두 가능
+            // 엔진 OutputTorque에 이미 토크 커브가 반영돼 있으므로 추가 부스트는 적용하지 않음(현실화)
             float torque = _engine.IsRunning ? _trans.TransmittedTorque * torqueScale : 0f;
-
-            // RPM에 따른 비선형 토크 곡선 적용
-            float rpmNormalized = Mathf.Clamp01(_engine.RPM / _engine.RedlineRpm); // RedlineRpm으로 수정
-            float torqueCurveFactor = Mathf.Lerp(0.8f, 1.2f, Mathf.Sin(rpmNormalized * Mathf.PI));
-            torque *= torqueCurveFactor;
 
             // 저속에서 추가 토크 배율 적용
             float launchBlend = Mathf.InverseLerp(0f, launchAssistEndKph, SpeedKph);
@@ -456,6 +457,13 @@ namespace CarSim.Vehicle
             wheelFR.brakeTorque = brake * 0.8f;
             wheelRL.brakeTorque = brake * 0.2f + hb;
             wheelRR.brakeTorque = brake * 0.2f + hb;
+        }
+
+        void ApplyAeroDrag()
+        {
+            float speed = _rb.linearVelocity.magnitude;
+            if (speed < 0.1f) return;
+            _rb.AddForce(-_rb.linearVelocity.normalized * aeroDragCoeff * speed * speed);
         }
 
         void SyncWheelMeshes()
