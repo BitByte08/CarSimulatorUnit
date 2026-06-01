@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using CarSim.ADAS;
 
 namespace CarSim.CAN
 {
@@ -29,8 +30,16 @@ namespace CarSim.CAN
         [Tooltip("C키 캘리브레이션 시 STM32에 전달할 기준 각도 (물리적으로 핸들을 이 각도만큼 돌린 상태에서 C 누름)")]
         [SerializeField] float calibrationAngle = 180f;
 
-        [Header("시뮬레이션 모드")]
-        [SerializeField] bool simMode = true;
+        [Header("시뮬레이션 조향")]
+        [Tooltip("키 입력 시 조향 속도(도/초)")]
+        [SerializeField] float steerInputRate = 300f;
+        [Tooltip("EPS 복구토크 → 시뮬 센터 복귀 속도 변환(도/초 per 토크)")]
+        [SerializeField] float simReturnGain = 450f;
+
+        EPS _eps;
+
+        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
+        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
 
         float _rawAngle;   // STM32에서 받은 스케일 보정 후 원시 각도
         float _angleZero;  // H키로 설정한 로컬 영점 오프셋
@@ -47,6 +56,8 @@ namespace CarSim.CAN
             CANBusManager.Instance.Register(CANID.STEERING_COLUMN, OnSwitchesData);
             CANBusManager.Instance.Register(0x102, OnFFBDiag);
             CANBusManager.Instance.Register(0x103, OnCANESR);
+
+            _eps = FindObjectOfType<EPS>();
         }
 
         void OnFFBDiag(byte[] data)
@@ -83,7 +94,7 @@ namespace CarSim.CAN
 
         void OnSteeringAngleData(byte[] data)
         {
-            if (simMode) return;
+            if (Sim) return;
             if (data.Length < 2) return;
 
             short raw = BitConverter.ToInt16(data, 0);
@@ -138,13 +149,25 @@ namespace CarSim.CAN
             // C키: 각도 스케일 캘리브레이션 (H로 영점 후, calibrationAngle만큼 돌리고 C)
             if (kb.cKey.wasPressedThisFrame) CalibrateAngle();
 
-            if (!simMode) return;
+            if (!Sim) return;
 
             // 스티어링 각도 시뮬레이션
             float h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f)
                     - (kb.aKey.isPressed || kb.leftArrowKey.isPressed  ? 1f : 0f);
-            float target = h * maxAngle;
-            SteeringAngle = Mathf.MoveTowards(SteeringAngle, target, Time.deltaTime * 300f);
+
+            if (Mathf.Abs(h) > 0.01f)
+            {
+                float target = h * maxAngle;
+                SteeringAngle = Mathf.MoveTowards(SteeringAngle, target, Time.deltaTime * steerInputRate);
+            }
+            else
+            {
+                // 입력 없음: EPS 자기정렬토크로 센터 복귀. 속도 0이면 ReturnTorque=0 → 복귀 없음(정지 시 핸들 유지)
+                float ret = _eps != null ? _eps.ReturnTorque : 0f;
+                SteeringAngle += ret * simReturnGain * Time.deltaTime;
+                if (Mathf.Abs(SteeringAngle) < 0.3f) SteeringAngle = 0f;
+            }
+            SteeringAngle = Mathf.Clamp(SteeringAngle, -maxAngle, maxAngle);
 
             // 스위치 시뮬레이션 (토글)
             if (kb.zKey.wasPressedThisFrame) ColumnSwitches ^= SwitchFlags.TurnLeft;
