@@ -36,8 +36,8 @@ namespace CarSim.CAN
         /// <summary>두 패널 플래그를 합산한 값</summary>
         SwitchFlags Combined => Switches | ColumnSwitches;
 
-        [Header("시뮬레이션 모드")]
-        [SerializeField] bool simMode = true;
+        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
+        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
 
         // VehicleController가 전원 상태를 제어할 수 있도록 public 메서드 추가
         public void SetIgnition(bool on)
@@ -86,6 +86,8 @@ namespace CarSim.CAN
             // 매 프레임 EngineStart 리셋 (모멘터리)
             EngineStart = false;
 
+            if (!Sim) return;
+
             var kb = Keyboard.current;
             if (kb == null) return;
 
@@ -98,9 +100,9 @@ namespace CarSim.CAN
             if (kb.jKey.wasPressedThisFrame) Switches ^= SwitchFlags.HighBeam;
             if (kb.bKey.wasPressedThisFrame) Switches ^= SwitchFlags.Hazard;
 
-            // ── 방향지시등 (스티어링 컬럼 시뮬) ─────────────
-            if (kb.zKey.wasPressedThisFrame) ColumnSwitches ^= SwitchFlags.TurnLeft;
-            if (kb.xKey.wasPressedThisFrame) ColumnSwitches ^= SwitchFlags.TurnRight;
+            // ── 방향지시등 (좌/우 상호 배타) ─────────────────
+            if (kb.zKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnLeft);
+            if (kb.xKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnRight);
 
             // ── 와이퍼 (F=저속, G=고속, 상호 배타) ──────────
             if (kb.fKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Slow);
@@ -115,6 +117,18 @@ namespace CarSim.CAN
             if (kb.digit4Key.wasPressedThisFrame) GearRequest = 4;
             if (kb.digit5Key.wasPressedThisFrame) GearRequest = 5;
             if (kb.digit6Key.wasPressedThisFrame) GearRequest = 6;
+        }
+
+        void ToggleTurnSignal(SwitchFlags target)
+        {
+            SwitchFlags other = target == SwitchFlags.TurnLeft
+                ? SwitchFlags.TurnRight
+                : SwitchFlags.TurnLeft;
+
+            bool wasOn = ColumnSwitches.HasFlag(target);
+            ColumnSwitches &= ~other;
+            if (wasOn) ColumnSwitches &= ~target;
+            else       ColumnSwitches |=  target;
         }
 
         enum WiperSpeed { Slow, Fast }

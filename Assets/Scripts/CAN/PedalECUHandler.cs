@@ -20,9 +20,10 @@ namespace CarSim.CAN
         [SerializeField] ushort brakeMin    = 0,  brakeMax    = 65535;
         [SerializeField] ushort clutchMin   = 0,  clutchMax   = 65535;
 
-        [Header("시뮬레이션 모드 (키보드 입력)")]
-        [SerializeField] bool simMode = true;
         [SerializeField] float clutchSmoothSpeed = 2f; // 클러치 변화 속도 (초당)
+
+        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
+        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
 
         void Start()
         {
@@ -31,7 +32,7 @@ namespace CarSim.CAN
 
         void OnPedalData(byte[] data)
         {
-            if (simMode) return;
+            if (Sim) return;
             if (data.Length < 6) return;
             ushort rawThrottle = BitConverter.ToUInt16(data, 0);
             ushort rawBrake    = BitConverter.ToUInt16(data, 2);
@@ -44,7 +45,7 @@ namespace CarSim.CAN
 
         void Update()
         {
-            if (!simMode) return;
+            if (!Sim) return;
 
             // 키보드 시뮬레이션
             var kb = Keyboard.current;
