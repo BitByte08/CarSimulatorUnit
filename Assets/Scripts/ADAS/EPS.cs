@@ -26,8 +26,8 @@ namespace CarSim.ADAS
         [SerializeField] float mechanicalTrail = 0.35f;
         [Tooltip("조향 속도 감쇠 (오버슈트/떨림 억제)")]
         [SerializeField] float steeringDamping = 0.12f;
-        [Tooltip("복구력이 완전히 살아나는 기준 속도(km/h). 정차 시 복구력 0")]
-        [SerializeField] float returnSpeedFull = 25f;
+        [Tooltip("복구력이 완전히 살아나는 기준 속도(km/h). 정차 시 0, 저속(이 속도)에서 이미 충분히 정렬")]
+        [SerializeField] float returnSpeedFull = 8f;
 
         [Header("도로 진동 (FFB 럼블)")]
         [Tooltip("도로 진동 최대 세기 (정규화). 0이면 비활성")]
