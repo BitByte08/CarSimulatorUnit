@@ -1,6 +1,8 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using CarSim.UI;
 
 public class SceneSetupAll
@@ -26,6 +28,7 @@ public class SceneSetupAll
 
         EnsureCanSettingsPanel();
         EnsureDriverCamera();
+        EnsureBloom();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
@@ -36,8 +39,26 @@ public class SceneSetupAll
             "• 미러 카메라 3개 + 화면 표시\n" +
             "• 디버그 UI off\n" +
             "• CanSettings 오브젝트 (F2 설정창)\n" +
-            "• DriverCamera 관성 헤드무빙 (Main Camera)\n\n" +
+            "• DriverCamera 관성 헤드무빙 (Main Camera)\n" +
+            "• Bloom 활성 (PP on + Global Volume)\n\n" +
             "Ctrl+S로 저장하세요.", "OK");
+    }
+
+    static void EnsureBloom()
+    {
+        var cam = Camera.main;
+        if (cam != null)
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+
+        if (Object.FindObjectOfType<Volume>() == null)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/SampleSceneProfile.asset");
+            var go = new GameObject("GlobalVolume");
+            var vol = go.AddComponent<Volume>();
+            vol.isGlobal = true;
+            if (profile != null) vol.sharedProfile = profile;
+            Undo.RegisterCreatedObjectUndo(go, "Create GlobalVolume");
+        }
     }
 
     static void EnsureDriverCamera()
