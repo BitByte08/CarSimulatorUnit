@@ -39,6 +39,15 @@ namespace CarSim.CAN
         // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
         bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
 
+        [Header("방향지시등 자동 취소")]
+        [Tooltip("이 핸들각(도) 이상 꺾이면 자동취소 무장")]
+        [SerializeField] float autoCancelArmAngle = 60f;
+        [Tooltip("이 핸들각 이하로 센터 복귀 시 취소")]
+        [SerializeField] float autoCancelReturnAngle = 15f;
+
+        SteeringHandler _steering;
+        bool _leftArmed, _rightArmed;
+
         // VehicleController가 전원 상태를 제어할 수 있도록 public 메서드 추가
         public void SetIgnition(bool on)
         {
@@ -53,6 +62,8 @@ namespace CarSim.CAN
             CANBusManager.Instance.Register(CANID.SWITCH_STATUS,   OnSwitchData);
             CANBusManager.Instance.Register(CANID.GEAR_STATUS,     OnGearData);
             CANBusManager.Instance.Register(CANID.STEERING_COLUMN, OnColumnData);
+
+            _steering = FindObjectOfType<SteeringHandler>();
         }
 
         void OnSwitchData(byte[] data)
@@ -85,6 +96,8 @@ namespace CarSim.CAN
         {
             // 매 프레임 EngineStart 리셋 (모멘터리)
             EngineStart = false;
+
+            UpdateTurnSignalAutoCancel();
 
             if (!Sim) return;
 
@@ -146,6 +159,33 @@ namespace CarSim.CAN
             ColumnSwitches &= ~other;           // 반대 속도 항상 끔
             if (wasOn) ColumnSwitches &= ~target;
             else       ColumnSwitches |=  target;
+        }
+
+        // 핸들을 꺾었다(arm) 센터로 복귀하면(return) 방향지시등 자동 취소 — 실차 캔슬 캠 모사
+        void UpdateTurnSignalAutoCancel()
+        {
+            if (_steering == null) return;
+            float angle = _steering.SteeringAngle;  // 좌: 음수, 우: 양수
+
+            if (Combined.HasFlag(SwitchFlags.TurnLeft))
+            {
+                if (angle < -autoCancelArmAngle) _leftArmed = true;
+                else if (_leftArmed && angle > -autoCancelReturnAngle) { ClearTurnSignal(SwitchFlags.TurnLeft); _leftArmed = false; }
+            }
+            else _leftArmed = false;
+
+            if (Combined.HasFlag(SwitchFlags.TurnRight))
+            {
+                if (angle > autoCancelArmAngle) _rightArmed = true;
+                else if (_rightArmed && angle < autoCancelReturnAngle) { ClearTurnSignal(SwitchFlags.TurnRight); _rightArmed = false; }
+            }
+            else _rightArmed = false;
+        }
+
+        void ClearTurnSignal(SwitchFlags dir)
+        {
+            Switches       &= ~dir;
+            ColumnSwitches &= ~dir;
         }
     }
 }
