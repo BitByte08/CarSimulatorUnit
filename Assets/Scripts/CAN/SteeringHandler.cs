@@ -33,10 +33,13 @@ namespace CarSim.CAN
         [Header("시뮬레이션 조향")]
         [Tooltip("키 입력 시 조향 속도(도/초)")]
         [SerializeField] float steerInputRate = 300f;
-        [Tooltip("EPS 복구토크 → 시뮬 센터 복귀 속도 변환(도/초 per 토크)")]
-        [SerializeField] float simReturnGain = 450f;
+        [Tooltip("복귀 가속 게인 — 관성 모델(토크→각가속도). 클수록 빠르게 복귀")]
+        [SerializeField] float returnAccel = 1600f;
+        [Tooltip("복귀 감쇠 — 클수록 오버슈트 적고 빨리 정착(고무줄 방지)")]
+        [SerializeField] float returnDamping = 5f;
 
         EPS _eps;
+        float _steerVel;   // 조향 각속도(도/초) — 관성 복귀용
 
         // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
         bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
@@ -155,17 +158,28 @@ namespace CarSim.CAN
             float h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f)
                     - (kb.aKey.isPressed || kb.leftArrowKey.isPressed  ? 1f : 0f);
 
+            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
             if (Mathf.Abs(h) > 0.01f)
             {
                 float target = h * maxAngle;
-                SteeringAngle = Mathf.MoveTowards(SteeringAngle, target, Time.deltaTime * steerInputRate);
+                float prev = SteeringAngle;
+                SteeringAngle = Mathf.MoveTowards(SteeringAngle, target, dt * steerInputRate);
+                _steerVel = (SteeringAngle - prev) / dt;   // 놓는 순간 각속도 연속성 유지
             }
             else
             {
-                // 입력 없음: EPS 자기정렬토크로 센터 복귀. 속도 0이면 ReturnTorque=0 → 복귀 없음(정지 시 핸들 유지)
+                // 입력 없음: 관성 기반 복귀(2차 시스템) — 토크를 각가속도로 적분해 고무줄 느낌 제거.
+                // 속도 0이면 ReturnTorque=0 → 복귀 없음(정지 시 핸들 유지)
                 float ret = _eps != null ? _eps.ReturnTorque : 0f;
-                SteeringAngle += ret * simReturnGain * Time.deltaTime;
-                if (Mathf.Abs(SteeringAngle) < 0.3f) SteeringAngle = 0f;
+                float accel = ret * returnAccel - _steerVel * returnDamping;
+                _steerVel += accel * dt;
+                SteeringAngle += _steerVel * dt;
+
+                if (Mathf.Abs(SteeringAngle) < 0.3f && Mathf.Abs(_steerVel) < 8f)
+                {
+                    SteeringAngle = 0f;
+                    _steerVel = 0f;
+                }
             }
             SteeringAngle = Mathf.Clamp(SteeringAngle, -maxAngle, maxAngle);
 
