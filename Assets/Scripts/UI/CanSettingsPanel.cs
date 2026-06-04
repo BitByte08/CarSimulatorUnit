@@ -141,6 +141,11 @@ namespace CarSim.UI
         void OnGUI()
         {
             EnsureStyles();
+
+            // ── 페달 게이지 오버레이 (항상 표시) ────────────────────
+            if (_showGauge && _pedalRef != null)
+                DrawPedalGauge();
+
             GUI.Label(new Rect(Screen.width - 220f, 8f, 210f, _fontSize + 10f), "F2: 설정", _label);
             if (!_show) return;
 
@@ -208,38 +213,51 @@ namespace CarSim.UI
             if (GUILayout.Button("닫기", _btn)) _show = false;
             GUILayout.EndScrollView();
             GUILayout.EndArea();
-
-            // ── 페달 게이지 오버레이 ────────────────────────────────────
-            if (_showGauge && _pedalRef != null)
-                DrawPedalGauge(w);
         }
 
-        void DrawPedalGauge(float panelW)
+        void DrawPedalGauge()
         {
-            float gw = Mathf.Min(panelW * 0.5f, 360f);
-            float gh = _fontSize * 5f;
-            float gx = Screen.width - gw - 16f;
-            float gy = Screen.height - gh - 16f;
+            float gw = 340f;
+            float gh = _fontSize * 6f;
+            float gx = Screen.width - gw - 20f;
+            float gy = 80f;
 
-            GUI.Box(new Rect(gx, gy, gw, gh), "페달", _box);
-            
-            float px = gx + 12f, py = gy + _fontSize + 6f;
-            float bw = gw - 24f, bh = _fontSize * 0.9f;
+            var box = new GUIStyle(GUI.skin.box) { fontSize = _fontSize + 2, fontStyle = FontStyle.Bold };
+            GUI.Box(new Rect(gx, gy, gw, gh), " PEDAL", box);
 
-            DrawGaugeBar(px, py, bw, bh, _pedalRef.Throttle, _pedalRef.RawThrottle, "THR", new Color(0.3f, 0.9f, 0.3f), _label);
-            py += bh + 6f;
-            DrawGaugeBar(px, py, bw, bh, _pedalRef.Brake,    _pedalRef.RawBrake,    "BRK", new Color(0.95f, 0.3f, 0.3f), _label);
-            py += bh + 6f;
-            DrawGaugeBar(px, py, bw, bh, _pedalRef.Clutch,   _pedalRef.RawClutch,   "CLU", new Color(0.3f, 0.7f, 0.95f), _label);
+            float px = gx + 16f, py = gy + _fontSize + 8f;
+            float bw = gw - 24f, bh = _fontSize * 1.1f;
+
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Throttle, _pedalRef.RawThrottle, "THR", new Color(0.2f, 0.85f, 0.2f));
+            py += bh + 10f;
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Brake,    _pedalRef.RawBrake,    "BRK", new Color(0.95f, 0.25f, 0.25f));
+            py += bh + 10f;
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Clutch,   _pedalRef.RawClutch,   "CLU", new Color(0.2f, 0.65f, 0.95f));
         }
 
-        static void DrawGaugeBar(float x, float y, float w, float h, float norm, ushort raw, string label, Color col, GUIStyle st)
+        void DrawGaugeBar(float x, float y, float w, float h, float norm, ushort raw, string label, Color col)
         {
-            GUI.Label(new Rect(x, y, 38f, h), label, st);
-            float bx = x + 40f, bw = w - 48f;
-            GUI.Box(new Rect(bx, y, bw, h), "");
-            GUI.Box(new Rect(bx + 1f, y + 1f, (bw - 2f) * Mathf.Clamp01(norm), h - 2f),
-                     $"{norm:F2}  (0x{raw:X4})", st);
+            GUI.Label(new Rect(x, y, 38f, h), label, _label);
+            float bx = x + 42f, barW = w - 50f;
+            // 배경 (어두운 회색)
+            GUI.Box(new Rect(bx, y, barW, h), "", new GUIStyle(GUI.skin.box)
+                { normal = { background = MakeTex(1, 1, new Color(0.1f, 0.1f, 0.1f, 0.7f)) } });
+            // 채워진 바
+            float fill = Mathf.Clamp01(norm) * (barW - 2f);
+            if (fill > 1f)
+                GUI.Box(new Rect(bx + 1f, y + 1f, fill, h - 2f), "",
+                    new GUIStyle(GUI.skin.box) { normal = { background = MakeTex(1, 1, col) } });
+            // 텍스트
+            GUI.Label(new Rect(bx + 4f, y, barW - 8f, h),
+                $"{norm:F2}  0x{raw:X4}", _label);
+        }
+
+        static Texture2D MakeTex(int w, int h, Color col)
+        {
+            var t = new Texture2D(w, h);
+            t.SetPixel(0, 0, col);
+            t.Apply();
+            return t;
         }
 
         void Apply()

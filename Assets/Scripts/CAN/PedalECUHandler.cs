@@ -21,9 +21,9 @@ namespace CarSim.CAN
         public ushort RawClutch   { get; private set; }
 
         [Header("페달 캘리브레이션 (ADC 원시값)")]
-        [SerializeField] ushort throttleMin = 0,  throttleMax = 65535;
-        [SerializeField] ushort brakeMin    = 0,  brakeMax    = 65535;
-        [SerializeField] ushort clutchMin   = 0,  clutchMax   = 65535;
+        [SerializeField] ushort throttleMin = 0,  throttleMax = 4095;
+        [SerializeField] ushort brakeMin    = 0,  brakeMax    = 4095;
+        [SerializeField] ushort clutchMin   = 0,  clutchMax   = 4095;
 
         [SerializeField] float clutchSmoothSpeed = 2f; // 클러치 변화 속도 (초당)
 
