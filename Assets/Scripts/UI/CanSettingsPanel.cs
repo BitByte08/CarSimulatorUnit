@@ -36,6 +36,8 @@ namespace CarSim.UI
         bool    _entertainCan = true;
         bool    _ffbCan       = true;
 
+        bool    _showGauge = true;
+
         const string PrefPedal     = "unit.pedal";
         const string PrefShifter   = "unit.shifter";
         const string PrefSteering  = "unit.steering";
@@ -196,6 +198,8 @@ namespace CarSim.UI
                 _clusterCan   = GUILayout.Toggle(_clusterCan,   " 클러스터 (Broadcast)",       _toggle);
                 _entertainCan = GUILayout.Toggle(_entertainCan, " 엔터테인먼트 (SwitchPanel)", _toggle);
                 _ffbCan       = GUILayout.Toggle(_ffbCan,       " FFB (Force Feedback)",       _toggle);
+                GUILayout.Space(4f);
+                _showGauge    = GUILayout.Toggle(_showGauge,    " 페달 게이지 표시",            _toggle);
 
                 ApplyUnitChanges();
             }
@@ -204,6 +208,38 @@ namespace CarSim.UI
             if (GUILayout.Button("닫기", _btn)) _show = false;
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+
+            // ── 페달 게이지 오버레이 ────────────────────────────────────
+            if (_showGauge && _pedalRef != null)
+                DrawPedalGauge(w);
+        }
+
+        void DrawPedalGauge(float panelW)
+        {
+            float gw = Mathf.Min(panelW * 0.5f, 360f);
+            float gh = _fontSize * 5f;
+            float gx = Screen.width - gw - 16f;
+            float gy = Screen.height - gh - 16f;
+
+            GUI.Box(new Rect(gx, gy, gw, gh), "페달", _box);
+            
+            float px = gx + 12f, py = gy + _fontSize + 6f;
+            float bw = gw - 24f, bh = _fontSize * 0.9f;
+
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Throttle, _pedalRef.RawThrottle, "THR", new Color(0.3f, 0.9f, 0.3f), _label);
+            py += bh + 6f;
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Brake,    _pedalRef.RawBrake,    "BRK", new Color(0.95f, 0.3f, 0.3f), _label);
+            py += bh + 6f;
+            DrawGaugeBar(px, py, bw, bh, _pedalRef.Clutch,   _pedalRef.RawClutch,   "CLU", new Color(0.3f, 0.7f, 0.95f), _label);
+        }
+
+        static void DrawGaugeBar(float x, float y, float w, float h, float norm, ushort raw, string label, Color col, GUIStyle st)
+        {
+            GUI.Label(new Rect(x, y, 38f, h), label, st);
+            float bx = x + 40f, bw = w - 48f;
+            GUI.Box(new Rect(bx, y, bw, h), "");
+            GUI.Box(new Rect(bx + 1f, y + 1f, (bw - 2f) * Mathf.Clamp01(norm), h - 2f),
+                     $"{norm:F2}  (0x{raw:X4})", st);
         }
 
         void Apply()

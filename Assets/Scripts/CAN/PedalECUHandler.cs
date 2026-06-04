@@ -15,6 +15,11 @@ namespace CarSim.CAN
         public float Brake     { get; private set; }
         public float Clutch    { get; private set; }  // 0=완전분리, 1=완전접속
 
+        // 원시 ADC 값 (켈리브레이션 확인용)
+        public ushort RawThrottle { get; private set; }
+        public ushort RawBrake    { get; private set; }
+        public ushort RawClutch   { get; private set; }
+
         [Header("페달 캘리브레이션 (ADC 원시값)")]
         [SerializeField] ushort throttleMin = 0,  throttleMax = 65535;
         [SerializeField] ushort brakeMin    = 0,  brakeMax    = 65535;
@@ -40,13 +45,13 @@ namespace CarSim.CAN
         {
             if (!useCanMode) return;
             if (data.Length < 6) return;
-            ushort rawThrottle = BitConverter.ToUInt16(data, 0);
-            ushort rawBrake    = BitConverter.ToUInt16(data, 2);
-            ushort rawClutch   = BitConverter.ToUInt16(data, 4);
+            RawThrottle = BitConverter.ToUInt16(data, 0);
+            RawBrake    = BitConverter.ToUInt16(data, 2);
+            RawClutch   = BitConverter.ToUInt16(data, 4);
 
-            Throttle = Normalize(rawThrottle, throttleMin, throttleMax);
-            Brake    = Normalize(rawBrake,    brakeMin,    brakeMax);
-            Clutch   = Normalize(rawClutch,   clutchMin,   clutchMax);
+            Throttle = Normalize(RawThrottle, throttleMin, throttleMax);
+            Brake    = Normalize(RawBrake,    brakeMin,    brakeMax);
+            Clutch   = Normalize(RawClutch,   clutchMin,   clutchMax);
         }
 
         void Update()
