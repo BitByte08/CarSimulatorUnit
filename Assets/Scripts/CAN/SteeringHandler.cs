@@ -38,11 +38,14 @@ namespace CarSim.CAN
         [Tooltip("복귀 감쇠 — 클수록 오버슈트 적고 빨리 정착(고무줄 방지)")]
         [SerializeField] float returnDamping = 5f;
 
+        [Header("유닛 모드")]
+        [Tooltip("ON=CAN 하드웨어, OFF=키보드 시뮬레이션")]
+        public bool useCanMode = true;
+
+        const string PrefUnit = "unit.steering";
+
         EPS _eps;
         float _steerVel;   // 조향 각속도(도/초) — 관성 복귀용
-
-        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
-        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
 
         float _rawAngle;   // STM32에서 받은 스케일 보정 후 원시 각도
         float _angleZero;  // H키로 설정한 로컬 영점 오프셋
@@ -55,6 +58,9 @@ namespace CarSim.CAN
 
         void Start()
         {
+            if (PlayerPrefs.HasKey(PrefUnit))
+                useCanMode = PlayerPrefs.GetInt(PrefUnit) != 0;
+
             CANBusManager.Instance.Register(CANID.STEERING_ANGLE, OnSteeringAngleData);
             CANBusManager.Instance.Register(CANID.STEERING_COLUMN, OnSwitchesData);
             CANBusManager.Instance.Register(0x102, OnFFBDiag);
@@ -97,7 +103,7 @@ namespace CarSim.CAN
 
         void OnSteeringAngleData(byte[] data)
         {
-            if (Sim) return;
+            if (!useCanMode) return;
             if (data.Length < 2) return;
 
             short raw = BitConverter.ToInt16(data, 0);
@@ -147,14 +153,14 @@ namespace CarSim.CAN
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            // H키: 엔코더 영점 (simMode 무관)
+            // H키: 엔코더 영점 (CAN/Sim 무관)
             if (kb.hKey.wasPressedThisFrame) ZeroEncoder();
             // C키: 각도 스케일 캘리브레이션 (H로 영점 후, calibrationAngle만큼 돌리고 C)
             if (kb.cKey.wasPressedThisFrame) CalibrateAngle();
 
-            if (!Sim) return;
+            if (useCanMode) return;
 
-            // 스티어링 각도 시뮬레이션
+            // ── 스티어링 각도 시뮬레이션 ──
             float h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f)
                     - (kb.aKey.isPressed || kb.leftArrowKey.isPressed  ? 1f : 0f);
 
@@ -183,7 +189,7 @@ namespace CarSim.CAN
             }
             SteeringAngle = Mathf.Clamp(SteeringAngle, -maxAngle, maxAngle);
 
-            // 스위치 시뮬레이션 (토글)
+            // ── 스위치 시뮬레이션 (토글) ──
             if (kb.zKey.wasPressedThisFrame) ColumnSwitches ^= SwitchFlags.TurnLeft;
             if (kb.xKey.wasPressedThisFrame) ColumnSwitches ^= SwitchFlags.TurnRight;
             if (kb.fKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Slow);

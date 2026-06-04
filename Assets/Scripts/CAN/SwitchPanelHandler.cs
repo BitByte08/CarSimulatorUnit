@@ -36,8 +36,14 @@ namespace CarSim.CAN
         /// <summary>두 패널 플래그를 합산한 값</summary>
         SwitchFlags Combined => Switches | ColumnSwitches;
 
-        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
-        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
+        [Header("유닛 모드")]
+        [Tooltip("ON=CAN 기어 하드웨어, OFF=키보드")]
+        public bool gearCanMode = true;
+        [Tooltip("ON=CAN 스위치 하드웨어, OFF=키보드")]
+        public bool switchCanMode = true;
+
+        const string PrefGear   = "unit.shifter";
+        const string PrefSwitch = "unit.entertain";
 
         [Header("방향지시등 자동 취소")]
         [Tooltip("이 핸들각(도) 이상 꺾이면 자동취소 무장")]
@@ -59,6 +65,11 @@ namespace CarSim.CAN
 
         void Start()
         {
+            if (PlayerPrefs.HasKey(PrefGear))
+                gearCanMode = PlayerPrefs.GetInt(PrefGear) != 0;
+            if (PlayerPrefs.HasKey(PrefSwitch))
+                switchCanMode = PlayerPrefs.GetInt(PrefSwitch) != 0;
+
             CANBusManager.Instance.Register(CANID.SWITCH_STATUS,   OnSwitchData);
             CANBusManager.Instance.Register(CANID.GEAR_STATUS,     OnGearData);
             CANBusManager.Instance.Register(CANID.STEERING_COLUMN, OnColumnData);
@@ -68,6 +79,7 @@ namespace CarSim.CAN
 
         void OnSwitchData(byte[] data)
         {
+            if (!switchCanMode) return;
             if (data.Length < 2) return;
             var newFlags = (SwitchFlags)BitConverter.ToUInt16(data, 0);
 
@@ -82,54 +94,66 @@ namespace CarSim.CAN
 
         void OnGearData(byte[] data)
         {
+            if (!gearCanMode) return;
             if (data.Length < 1) return;
             GearRequest = (sbyte)data[0]; // -1=R, 0=N, 1~6
         }
 
         void OnColumnData(byte[] data)
         {
+            if (!switchCanMode) return;
             if (data.Length < 2) return;
             ColumnSwitches = (SwitchFlags)BitConverter.ToUInt16(data, 0);
         }
 
+        /// <summary>EngineStart 플래그를 읽고 소비 (한 번만 true 반환).</summary>
+        public bool ConsumeEngineStart()
+        {
+            bool val = EngineStart;
+            EngineStart = false;
+            return val;
+        }
+
         void Update()
         {
-            // 매 프레임 EngineStart 리셋 (모멘터리)
-            EngineStart = false;
-
             UpdateTurnSignalAutoCancel();
-
-            if (!Sim) return;
 
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            // 시동: E키 누른 프레임에만 ON (CAN rising edge는 OnSwitchData에서 처리)
-            if (kb.eKey.wasPressedThisFrame)
-                EngineStart = true;
+            // ── 스위치 시뮬레이션 (switchCanMode=false 일 때 키보드) ──
+            if (!switchCanMode)
+            {
+                // 시동: E키 누른 프레임에만 ON
+                if (kb.eKey.wasPressedThisFrame)
+                    EngineStart = true;
 
-            // ── 라이트 ──────────────────────────────────────
-            if (kb.hKey.wasPressedThisFrame) Switches ^= SwitchFlags.HeadLight;
-            if (kb.jKey.wasPressedThisFrame) Switches ^= SwitchFlags.HighBeam;
-            if (kb.bKey.wasPressedThisFrame) Switches ^= SwitchFlags.Hazard;
+                // 라이트
+                if (kb.hKey.wasPressedThisFrame) Switches ^= SwitchFlags.HeadLight;
+                if (kb.jKey.wasPressedThisFrame) Switches ^= SwitchFlags.HighBeam;
+                if (kb.bKey.wasPressedThisFrame) Switches ^= SwitchFlags.Hazard;
 
-            // ── 방향지시등 (좌/우 상호 배타) ─────────────────
-            if (kb.zKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnLeft);
-            if (kb.xKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnRight);
+                // 방향지시등 (좌/우 상호 배타)
+                if (kb.zKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnLeft);
+                if (kb.xKey.wasPressedThisFrame) ToggleTurnSignal(SwitchFlags.TurnRight);
 
-            // ── 와이퍼 (F=저속, G=고속, 상호 배타) ──────────
-            if (kb.fKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Slow);
-            if (kb.gKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Fast);
+                // 와이퍼 (F=저속, G=고속, 상호 배타)
+                if (kb.fKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Slow);
+                if (kb.gKey.wasPressedThisFrame) ToggleWiper(WiperSpeed.Fast);
+            }
 
-            // ── 기어: 숫자키 1~6, R키, N키 ──────────────────
-            if (kb.nKey.wasPressedThisFrame)      GearRequest = 0;
-            if (kb.rKey.wasPressedThisFrame)      GearRequest = -1;
-            if (kb.digit1Key.wasPressedThisFrame) GearRequest = 1;
-            if (kb.digit2Key.wasPressedThisFrame) GearRequest = 2;
-            if (kb.digit3Key.wasPressedThisFrame) GearRequest = 3;
-            if (kb.digit4Key.wasPressedThisFrame) GearRequest = 4;
-            if (kb.digit5Key.wasPressedThisFrame) GearRequest = 5;
-            if (kb.digit6Key.wasPressedThisFrame) GearRequest = 6;
+            // ── 기어 시뮬레이션 (gearCanMode=false 일 때 키보드) ──
+            if (!gearCanMode)
+            {
+                if (kb.nKey.wasPressedThisFrame)      GearRequest = 0;
+                if (kb.rKey.wasPressedThisFrame)      GearRequest = -1;
+                if (kb.digit1Key.wasPressedThisFrame) GearRequest = 1;
+                if (kb.digit2Key.wasPressedThisFrame) GearRequest = 2;
+                if (kb.digit3Key.wasPressedThisFrame) GearRequest = 3;
+                if (kb.digit4Key.wasPressedThisFrame) GearRequest = 4;
+                if (kb.digit5Key.wasPressedThisFrame) GearRequest = 5;
+                if (kb.digit6Key.wasPressedThisFrame) GearRequest = 6;
+            }
         }
 
         void ToggleTurnSignal(SwitchFlags target)

@@ -22,17 +22,23 @@ namespace CarSim.CAN
 
         [SerializeField] float clutchSmoothSpeed = 2f; // 클러치 변화 속도 (초당)
 
-        // 시뮬레이션 여부는 CANBusManager 단일 소스에서 받아온다 (키보드 vs 하드웨어)
-        bool Sim => CANBusManager.Instance == null || CANBusManager.Instance.SimulationMode;
+        [Header("유닛 모드")]
+        [Tooltip("ON=CAN 하드웨어, OFF=키보드 시뮬레이션")]
+        public bool useCanMode = true;
+
+        const string PrefUnit = "unit.pedal";
 
         void Start()
         {
+            if (PlayerPrefs.HasKey(PrefUnit))
+                useCanMode = PlayerPrefs.GetInt(PrefUnit) != 0;
+
             CANBusManager.Instance.Register(CANID.PEDAL_STATUS, OnPedalData);
         }
 
         void OnPedalData(byte[] data)
         {
-            if (Sim) return;
+            if (!useCanMode) return;
             if (data.Length < 6) return;
             ushort rawThrottle = BitConverter.ToUInt16(data, 0);
             ushort rawBrake    = BitConverter.ToUInt16(data, 2);
@@ -45,7 +51,7 @@ namespace CarSim.CAN
 
         void Update()
         {
-            if (!Sim) return;
+            if (useCanMode) return;
 
             // 키보드 시뮬레이션
             var kb = Keyboard.current;

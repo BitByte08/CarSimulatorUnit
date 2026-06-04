@@ -41,6 +41,11 @@ namespace CarSim.ADAS
         [Tooltip("0이면 정상 동작, 양수면 오른쪽으로, 음수면 왼쪽으로 고정 토크 계속 전송")]
         [SerializeField] float testForceTorque = 0f;
 
+        [Header("유닛 모드")]
+        [Tooltip("ON=CAN FFB 전송, OFF=FFB 비활성화")]
+        public bool ffbEnabled = true;
+        const string PrefUnit = "unit.ffb";
+
         /// <summary>정규화된 복구토크(-1~1, 센터 방향). 진동/엔드스탑 제외. 시뮬 조향이 사용.</summary>
         public float ReturnTorque { get; private set; }
 
@@ -52,6 +57,9 @@ namespace CarSim.ADAS
 
         void Awake()
         {
+            if (PlayerPrefs.HasKey(PrefUnit))
+                ffbEnabled = PlayerPrefs.GetInt(PrefUnit) != 0;
+
             _vc       = GetComponent<VehicleController>();
             _steering = FindObjectOfType<SteeringHandler>();
             Debug.Log($"[EPS] Awake: _steering={(_steering != null ? "found" : "NULL")}, _vc={(_vc != null ? "found" : "NULL")}");
@@ -98,7 +106,8 @@ namespace CarSim.ADAS
             }
 
             float sendTorque = testForceTorque != 0f ? testForceTorque : totalFFB;
-            _steering.SendFFBTorque(sendTorque);
+            if (ffbEnabled)
+                _steering.SendFFBTorque(sendTorque);
 
             _logTimer -= Time.fixedDeltaTime;
             if (_logTimer <= 0f)

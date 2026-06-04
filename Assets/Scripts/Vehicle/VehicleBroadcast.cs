@@ -45,6 +45,12 @@ namespace CarSim.Vehicle
     [RequireComponent(typeof(ManualTransmission))]
     public class VehicleBroadcast : MonoBehaviour
     {
+        [Header("유닛 모드")]
+        [Tooltip("ON=CAN 클러스터 브로드캐스트, OFF=중지")]
+        public bool broadcastEnabled = true;
+
+        const string PrefUnit = "unit.cluster";
+
         [Header("전송 주기 (초)")]
         [SerializeField] float speedRpmPeriod    = 0.05f;   // 0x400, 0x500  20 Hz
         [SerializeField] float engineStatePeriod = 0.20f;   // 0x501          5 Hz
@@ -81,6 +87,9 @@ namespace CarSim.Vehicle
 
         void Awake()
         {
+            if (PlayerPrefs.HasKey(PrefUnit))
+                broadcastEnabled = PlayerPrefs.GetInt(PrefUnit) != 0;
+
             _vc     = GetComponent<VehicleController>();
             _engine = GetComponent<Engine>();
             _trans  = GetComponent<ManualTransmission>();
@@ -98,6 +107,8 @@ namespace CarSim.Vehicle
 
         void Update()
         {
+            if (!broadcastEnabled) return;
+
             float now = Time.time;
 
             if (now - _tSpeed >= speedRpmPeriod)

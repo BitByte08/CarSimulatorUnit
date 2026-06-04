@@ -106,12 +106,11 @@ namespace CarSim.Vehicle
         public float LateralG      => Vector3.Dot(_rb.linearVelocity, transform.right) / 9.81f;
         public float LongitudinalG { get; private set; }
         
-        public enum PowerState { Off, Acc, On }
+        public enum PowerState { Off, On }
         public PowerState CurrentPowerState { get; private set; } = PowerState.Off;
 
         Vector3 _prevVelocity;
         Vector3 _lastCenterOfMassOffset;
-        bool _wasEngineStartSwitchOn; // 버튼 시동용 이전 상태
 
         void Awake()
         {
@@ -160,7 +159,7 @@ namespace CarSim.Vehicle
             w.mass = 20f;
             
             // 휠 댐핑: 너무 높으면 고속에서 롤링 저항 증가
-            w.wheelDampingRate = 0.25f;
+            w.wheelDampingRate = 0.05f;
             
             // 힘 적용점: 0으로 설정 (Unity 권장, 안정성 최대)
             w.forceAppPointDistance = 0f;  // ↓ 고속 안정성 (0.1 → 0)
@@ -275,13 +274,8 @@ namespace CarSim.Vehicle
 
         void HandleIgnition()
         {
-            // 버튼 시동 로직: EngineStart 스위치의 '눌리는 순간'(rising edge)을 감지
-            bool engineStartPressed = _switches.EngineStart && !_wasEngineStartSwitchOn;
-            _wasEngineStartSwitchOn = _switches.EngineStart;
+            if (!_switches.ConsumeEngineStart()) return;
 
-            if (!engineStartPressed) return;
-
-            // 시동이 걸려있을 때 버튼을 누르면 무조건 시동 OFF
             if (_engine.State != Engine.EngineState.Off)
             {
                 _engine.StopEngine();
@@ -291,41 +285,10 @@ namespace CarSim.Vehicle
                 return;
             }
 
-            // 시동이 꺼져있을 때
-            bool clutchDepressed = _pedals.Clutch < 0.3f;
-            bool brakePressed = _pedals.Brake > 0.1f;
-
-            // 1. 클러치와 브레이크를 동시에 밟고 누르면 바로 시동 (안전 시동)
-            // 주행 중 시동이 꺼졌을 때도 이 조건을 만족하면 재시동 가능
-            if (clutchDepressed && brakePressed)
-            {
-                _engine.StartEngine();
-                CurrentPowerState = PowerState.On;
-                if (_switches != null) _switches.SetIgnition(true);
-                Debug.Log("[VC] 시동 시퀀스 시작. 전원 상태: ON");
-            }
-            // 2. 안 밟고 누르면 OFF -> ACC -> ON -> OFF 순환
-            else
-            {
-                switch (CurrentPowerState)
-                {
-                    case PowerState.Off:
-                        CurrentPowerState = PowerState.Acc;
-                        if (_switches != null) _switches.SetIgnition(true);
-                        Debug.Log("[VC] Power state: ACC ON");
-                        break;
-                    case PowerState.Acc:
-                        CurrentPowerState = PowerState.On;
-                        if (_switches != null) _switches.SetIgnition(true);
-                        Debug.Log("[VC] Power state: IGNITION ON");
-                        break;
-                    case PowerState.On:
-                        CurrentPowerState = PowerState.Off;
-                        if (_switches != null) _switches.SetIgnition(false);
-                        Debug.Log("[VC] Power state: OFF");
-                        break;
-                }
-            }
+            _engine.StartEngine();
+            CurrentPowerState = PowerState.On;
+            if (_switches != null) _switches.SetIgnition(true);
+            Debug.Log("[VC] Engine START, Power ON");
         }
 
         void FeedInputToModules()

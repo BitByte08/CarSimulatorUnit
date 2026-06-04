@@ -177,8 +177,8 @@ namespace CarSim.Vehicle
         {
             // 가솔린 NA 특성: 중고회전(4000~5000rpm)에서 최대 토크
             return new AnimationCurve(
-                new Keyframe(0.00f, 0.60f),  // 아이들
-                new Keyframe(0.20f, 0.75f),  // ~1300rpm
+                new Keyframe(0.00f, 0.35f),  // 아이들 — 현실적 저RPM 토크
+                new Keyframe(0.20f, 0.55f),  // ~1300rpm
                 new Keyframe(0.40f, 0.85f),  // ~2600rpm
                 new Keyframe(0.60f, 0.95f),  // ~3900rpm
                 new Keyframe(0.70f, 1.00f),  // ~4500rpm (최대 토크)
